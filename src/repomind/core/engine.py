@@ -110,34 +110,11 @@ def analyze_repository(
     config = config or load_config(root)
     history_enabled = config.use_git_history if use_history is None else use_history
 
-    _notify(progress, "discovering", 0, 0)
-    files = find_python_files(root, exclude=config.exclude)
-
-    modules: list[ParsedModule] = []
-    for index, path in enumerate(files, start=1):
-        _notify(progress, "parsing", index, len(files))
-        modules.append(parse_module(path, root))
-
-    _notify(progress, "graph", 1, 1)
-    graph = DependencyGraph.build(modules)
-
-    history: HistoryReport | None = None
-    if history_enabled and modules:
-        _notify(progress, "history", 0, 0)
-        history = analyze_history(
-            root,
-            paths={module.rel_path for module in modules},
-            max_commits=config.history_commits,
-        )
-
-    context = AnalysisContext(
-        root=root,
-        modules=tuple(modules),
-        graph=graph,
-        config=config,
-        history=history,
-        total_loc=sum(module.loc for module in modules),
-    )
+    files = _discover_files(root, config, progress)
+    modules = _parse_modules(files, root, progress)
+    graph = _build_graph(modules, progress)
+    history = _collect_history(root, modules, config, enabled=history_enabled, progress=progress)
+    context = _build_context(root, modules, graph, config, history)
 
     _notify(progress, "rules", 0, 0)
     findings, warnings = _run_rules(context)
@@ -155,6 +132,72 @@ def analyze_repository(
         history=history,
         duration_seconds=time.perf_counter() - start,
         warnings=warnings,
+    )
+
+
+def _discover_files(
+    root: Path,
+    config: AnalysisConfig,
+    progress: ProgressCallback | None,
+) -> list[Path]:
+    """Run the discovery stage."""
+    _notify(progress, "discovering", 0, 0)
+    return find_python_files(root, exclude=config.exclude)
+
+
+def _parse_modules(
+    files: list[Path],
+    root: Path,
+    progress: ProgressCallback | None,
+) -> list[ParsedModule]:
+    """Parse every discovered file into metrics."""
+    modules: list[ParsedModule] = []
+    for index, path in enumerate(files, start=1):
+        _notify(progress, "parsing", index, len(files))
+        modules.append(parse_module(path, root))
+    return modules
+
+
+def _build_graph(modules: list[ParsedModule], progress: ProgressCallback | None) -> DependencyGraph:
+    """Build the module dependency graph."""
+    _notify(progress, "graph", 1, 1)
+    return DependencyGraph.build(modules)
+
+
+def _collect_history(
+    root: Path,
+    modules: list[ParsedModule],
+    config: AnalysisConfig,
+    *,
+    enabled: bool,
+    progress: ProgressCallback | None,
+) -> HistoryReport | None:
+    """Run the optional Git history stage."""
+    if not enabled or not modules:
+        return None
+    _notify(progress, "history", 0, 0)
+    return analyze_history(
+        root,
+        paths={module.rel_path for module in modules},
+        max_commits=config.history_commits,
+    )
+
+
+def _build_context(
+    root: Path,
+    modules: list[ParsedModule],
+    graph: DependencyGraph,
+    config: AnalysisConfig,
+    history: HistoryReport | None,
+) -> AnalysisContext:
+    """Assemble the immutable snapshot passed to every rule."""
+    return AnalysisContext(
+        root=root,
+        modules=tuple(modules),
+        graph=graph,
+        config=config,
+        history=history,
+        total_loc=sum(module.loc for module in modules),
     )
 
 

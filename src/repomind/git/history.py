@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import math
 import os
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from git import InvalidGitRepositoryError, NoSuchPathError, Repo
+from git import Commit, InvalidGitRepositoryError, NoSuchPathError, Repo
 from git.exc import GitCommandError
+from git.types import Files_TD, PathLike
 
 
 @dataclass(slots=True)
@@ -107,20 +108,10 @@ def analyze_history(
         repository or the repository has no commits yet.
     """
     root = root.resolve()
-    try:
-        repo = Repo(root, search_parent_directories=True)
-    except (InvalidGitRepositoryError, NoSuchPathError):
+    opened = _open_repository(root)
+    if opened is None:
         return None
-
-    try:
-        head = repo.head.commit
-    except (ValueError, GitCommandError):
-        return None
-
-    working_tree = repo.working_tree_dir
-    if working_tree is None:
-        return None
-    repo_root = Path(working_tree)
+    repo, repo_root, head = opened
 
     tracked = set(paths) if paths is not None else None
     files: dict[str, FileHistory] = {}
@@ -128,26 +119,17 @@ def analyze_history(
 
     for commit in repo.iter_commits(head, max_count=max_commits):
         commit_count += 1
-        try:
-            stats = commit.stats.files
-        except (GitCommandError, ValueError):
-            continue
+        stats = _commit_stats(commit)
         if not stats:
             continue
 
-        author = commit.author.name or commit.author.email or "unknown"
+        author = _commit_author(commit)
         committed_at = commit.committed_datetime
         for file_path, file_stats in stats.items():
             rel_path = _relative_to_root(repo_root, root, os.fspath(file_path))
-            if rel_path is None or (tracked is not None and rel_path not in tracked):
+            if rel_path is None or not _is_tracked(rel_path, tracked):
                 continue
-            entry = files.setdefault(rel_path, FileHistory(rel_path=rel_path))
-            entry.commits += 1
-            entry.insertions += int(file_stats.get("insertions", 0))
-            entry.deletions += int(file_stats.get("deletions", 0))
-            entry.authors.add(author)
-            if entry.last_modified is None or committed_at > entry.last_modified:
-                entry.last_modified = committed_at
+            _accumulate_file(files, rel_path, author, committed_at, file_stats)
 
     return HistoryReport(
         total_commits=commit_count,
@@ -156,6 +138,56 @@ def analyze_history(
         branch=_branch_name(repo),
         files=files,
     )
+
+
+def _open_repository(root: Path) -> tuple[Repo, Path, Commit] | None:
+    """Open the enclosing repository and resolve its working tree and HEAD."""
+    try:
+        repo = Repo(root, search_parent_directories=True)
+        head = repo.head.commit
+    except (InvalidGitRepositoryError, NoSuchPathError, ValueError, GitCommandError):
+        return None
+
+    working_tree = repo.working_tree_dir
+    if working_tree is None:
+        return None
+    return repo, Path(working_tree), head
+
+
+def _commit_stats(commit: Commit) -> Mapping[PathLike, Files_TD]:
+    """Return per-file diff statistics, or an empty mapping when unavailable."""
+    try:
+        stats = commit.stats.files
+    except (GitCommandError, ValueError):
+        return {}
+    return stats or {}
+
+
+def _commit_author(commit: Commit) -> str:
+    """Return the commit author name, falling back to the email address."""
+    return commit.author.name or commit.author.email or "unknown"
+
+
+def _is_tracked(rel_path: str, tracked: set[str] | None) -> bool:
+    """Return ``True`` when *rel_path* is inside the tracked file set."""
+    return tracked is None or rel_path in tracked
+
+
+def _accumulate_file(
+    files: dict[str, FileHistory],
+    rel_path: str,
+    author: str,
+    committed_at: datetime,
+    file_stats: Files_TD,
+) -> None:
+    """Add one commit's change of a single file to the history accumulator."""
+    entry = files.setdefault(rel_path, FileHistory(rel_path=rel_path))
+    entry.commits += 1
+    entry.insertions += int(file_stats.get("insertions", 0))
+    entry.deletions += int(file_stats.get("deletions", 0))
+    entry.authors.add(author)
+    if entry.last_modified is None or committed_at > entry.last_modified:
+        entry.last_modified = committed_at
 
 
 def _relative_to_root(repo_root: Path, root: Path, file_path: str) -> str | None:

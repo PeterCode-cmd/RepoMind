@@ -216,20 +216,7 @@ def _decorator_name(decorator: ast.expr) -> str:
 
 def _class_metrics(node: ast.ClassDef, module_name: str) -> ClassMetrics:
     """Build :class:`ClassMetrics` for one class definition."""
-    methods: list[FunctionMetrics] = []
-    attributes: set[str] = set()
-
-    for child in node.body:
-        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            methods.append(_function_metrics(child, module_name, class_name=node.name))
-            attributes.update(_self_attributes(child))
-        elif isinstance(child, ast.Assign):
-            for target in child.targets:
-                if isinstance(target, ast.Name):
-                    attributes.add(target.id)
-        elif isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name):
-            attributes.add(child.target.id)
-
+    methods, attributes = _class_members(node, module_name)
     end_lineno = node.end_lineno if node.end_lineno is not None else node.lineno
     return ClassMetrics(
         name=node.name,
@@ -240,6 +227,35 @@ def _class_metrics(node: ast.ClassDef, module_name: str) -> ClassMetrics:
         attribute_count=len(attributes),
         base_count=len(node.bases),
     )
+
+
+def _class_members(
+    node: ast.ClassDef,
+    module_name: str,
+) -> tuple[list[FunctionMetrics], set[str]]:
+    """Collect methods and attribute names declared directly on the class."""
+    methods: list[FunctionMetrics] = []
+    attributes: set[str] = set()
+
+    for child in node.body:
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            methods.append(_function_metrics(child, module_name, class_name=node.name))
+            attributes.update(_self_attributes(child))
+        else:
+            attributes.update(_assigned_names(child))
+
+    return methods, attributes
+
+
+def _assigned_names(statement: ast.stmt) -> set[str]:
+    """Return names assigned by a class-level assignment statement."""
+    if isinstance(statement, ast.Assign):
+        targets: list[ast.expr] = list(statement.targets)
+    elif isinstance(statement, ast.AnnAssign):
+        targets = [statement.target]
+    else:
+        return set()
+    return {target.id for target in targets if isinstance(target, ast.Name)}
 
 
 def _self_attributes(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:

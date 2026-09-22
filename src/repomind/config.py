@@ -55,6 +55,9 @@ class Thresholds:
     hotspot_min_commits: int = 5
 
 
+_DEFAULT_HISTORY_COMMITS = 500
+
+
 @dataclass(frozen=True, slots=True)
 class AnalysisConfig:
     """Complete configuration for one analysis run."""
@@ -63,7 +66,7 @@ class AnalysisConfig:
     exclude: tuple[str, ...] = ()
     ignore: tuple[str, ...] = ()
     use_git_history: bool = True
-    history_commits: int = 500
+    history_commits: int = _DEFAULT_HISTORY_COMMITS
 
 
 CONFIG_FILENAMES = ("repomind.toml", "pyproject.toml")
@@ -134,6 +137,18 @@ def _load_toml(path: Path) -> dict[str, Any]:
 
 def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
     """Validate *table* and build an :class:`AnalysisConfig`."""
+    _reject_unknown_keys(table)
+    return AnalysisConfig(
+        thresholds=_parse_thresholds(table.get("thresholds", {})),
+        exclude=_parse_exclude(table),
+        ignore=_parse_ignore(table),
+        use_git_history=_parse_bool(table, "use_git_history", default=True),
+        history_commits=_parse_history_commits(table),
+    )
+
+
+def _reject_unknown_keys(table: dict[str, Any]) -> None:
+    """Fail loudly on configuration typos instead of ignoring them."""
     unknown = sorted(set(table) - _SECTION_KEYS)
     if unknown:
         valid = ", ".join(sorted(_SECTION_KEYS))
@@ -141,42 +156,37 @@ def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
             f"unknown configuration keys: {', '.join(unknown)} (valid keys: {valid})"
         )
 
-    thresholds = Thresholds()
-    if "thresholds" in table:
-        thresholds = _parse_thresholds(table["thresholds"])
 
-    exclude: tuple[str, ...] = ()
-    if "exclude" in table:
-        raw = table["exclude"]
-        if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
-            raise ConfigurationError("'exclude' must be a list of glob patterns")
-        exclude = tuple(raw)
+def _parse_exclude(table: dict[str, Any]) -> tuple[str, ...]:
+    """Validate the ``exclude`` list of glob patterns."""
+    if "exclude" not in table:
+        return ()
+    raw = table["exclude"]
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise ConfigurationError("'exclude' must be a list of glob patterns")
+    return tuple(raw)
 
-    ignore = _parse_ignore(table)
 
-    use_git_history = True
-    if "use_git_history" in table:
-        raw_flag = table["use_git_history"]
-        if not isinstance(raw_flag, bool):
-            raise ConfigurationError("'use_git_history' must be a boolean")
-        use_git_history = raw_flag
+def _parse_bool(table: dict[str, Any], key: str, *, default: bool) -> bool:
+    """Read a boolean flag from *table*, falling back to *default*."""
+    if key not in table:
+        return default
+    value = table[key]
+    if not isinstance(value, bool):
+        raise ConfigurationError(f"'{key}' must be a boolean")
+    return value
 
-    history_commits = 500
-    if "history_commits" in table:
-        raw_commits = table["history_commits"]
-        if not isinstance(raw_commits, int) or isinstance(raw_commits, bool):
-            raise ConfigurationError("'history_commits' must be an integer")
-        if raw_commits < 1:
-            raise ConfigurationError("'history_commits' must be a positive integer")
-        history_commits = raw_commits
 
-    return AnalysisConfig(
-        thresholds=thresholds,
-        exclude=exclude,
-        ignore=ignore,
-        use_git_history=use_git_history,
-        history_commits=history_commits,
-    )
+def _parse_history_commits(table: dict[str, Any]) -> int:
+    """Validate the ``history_commits`` window size."""
+    if "history_commits" not in table:
+        return _DEFAULT_HISTORY_COMMITS
+    value = table["history_commits"]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ConfigurationError("'history_commits' must be an integer")
+    if value < 1:
+        raise ConfigurationError("'history_commits' must be a positive integer")
+    return value
 
 
 def _parse_ignore(table: dict[str, Any]) -> tuple[str, ...]:

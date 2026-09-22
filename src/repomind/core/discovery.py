@@ -63,32 +63,45 @@ def find_python_files(root: Path, *, exclude: Sequence[str] = ()) -> list[Path]:
 
 def _git_python_files(root: Path) -> list[Path] | None:
     """List Python files through Git, or ``None`` when *root* is not a repo."""
-    try:
-        repo = Repo(root, search_parent_directories=True)
-    except (InvalidGitRepositoryError, NoSuchPathError):
+    opened = _open_git(root)
+    if opened is None:
         return None
-
-    working_tree = repo.working_tree_dir
-    if working_tree is None:
-        return None
+    repo, repo_root = opened
 
     try:
         listing = repo.git.ls_files("--cached", "--others", "--exclude-standard", "-z")
     except GitCommandError:
         return None
 
-    repo_root = Path(working_tree)
-    results: list[Path] = []
-    for entry in listing.split("\0"):
-        if not entry or not entry.endswith(".py"):
-            continue
-        absolute = (repo_root / entry).resolve()
-        if not absolute.is_file() or not absolute.is_relative_to(root):
-            continue
-        if _has_excluded_dir(absolute.relative_to(root)):
-            continue
-        results.append(absolute)
-    return results
+    return [
+        path
+        for entry in listing.split("\0")
+        if (path := _git_entry_path(repo_root, root, entry)) is not None
+    ]
+
+
+def _open_git(root: Path) -> tuple[Repo, Path] | None:
+    """Open the enclosing repository and return it with its working tree."""
+    try:
+        repo = Repo(root, search_parent_directories=True)
+    except (InvalidGitRepositoryError, NoSuchPathError):
+        return None
+    working_tree = repo.working_tree_dir
+    if working_tree is None:
+        return None
+    return repo, Path(working_tree)
+
+
+def _git_entry_path(repo_root: Path, root: Path, entry: str) -> Path | None:
+    """Resolve one ``git ls-files`` entry to an analyzable absolute path."""
+    if not entry or not entry.endswith(".py"):
+        return None
+    absolute = (repo_root / entry).resolve()
+    if not absolute.is_file() or not absolute.is_relative_to(root):
+        return None
+    if _has_excluded_dir(absolute.relative_to(root)):
+        return None
+    return absolute
 
 
 def _walk_python_files(root: Path) -> list[Path]:
@@ -102,22 +115,34 @@ def _walk_python_files(root: Path) -> list[Path]:
         except OSError:
             continue
         for entry in entries:
-            if entry.is_symlink():
-                continue
-            if entry.is_dir():
-                if entry.name.startswith(".") or entry.name in DEFAULT_EXCLUDED_DIRS:
-                    continue
-                stack.append(entry)
-            elif entry.suffix == ".py" and entry.is_file():
-                results.append(entry)
+            _visit_entry(entry, stack, results)
     return results
+
+
+def _visit_entry(entry: Path, stack: list[Path], results: list[Path]) -> None:
+    """Handle one directory entry during the filesystem walk."""
+    if entry.is_symlink():
+        return
+    if entry.is_dir():
+        if not _is_skippable_dir(entry.name):
+            stack.append(entry)
+    elif _is_python_file(entry):
+        results.append(entry)
+
+
+def _is_skippable_dir(name: str) -> bool:
+    """Return ``True`` for hidden and well-known non-source directories."""
+    return name.startswith(".") or name in DEFAULT_EXCLUDED_DIRS
+
+
+def _is_python_file(entry: Path) -> bool:
+    """Return ``True`` when *entry* is a Python source file."""
+    return entry.suffix == ".py" and entry.is_file()
 
 
 def _has_excluded_dir(relative: Path) -> bool:
     """Return ``True`` when any parent directory is excluded by default."""
-    return any(
-        part.startswith(".") or part in DEFAULT_EXCLUDED_DIRS for part in relative.parts[:-1]
-    )
+    return any(_is_skippable_dir(part) for part in relative.parts[:-1])
 
 
 def _relative_path(root: Path, path: Path) -> str:

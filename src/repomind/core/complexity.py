@@ -86,36 +86,66 @@ def _cognitive_score(node: ast.AST, nesting: int) -> int:
     if isinstance(node, _SCOPE_NODES):
         return 0
     if isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
-        score = 1 + nesting + _cognitive_body(node.body, nesting + 1)
-        if node.orelse:
-            score += 1 + _cognitive_body(node.orelse, nesting)
-        return score
+        return _score_loop(node, nesting)
     if isinstance(node, ast.If):
         return _if_score(node, nesting)
     if isinstance(node, ast.ExceptHandler):
-        return 1 + nesting + _cognitive_body(node.body, nesting + 1)
+        return _score_handler(node, nesting)
     if isinstance(node, ast.Try):
-        score = _cognitive_body(node.body, nesting)
-        score += sum(_cognitive_score(handler, nesting) for handler in node.handlers)
-        score += _cognitive_body(node.orelse, nesting)
-        score += _cognitive_body(node.finalbody, nesting)
-        return score
+        return _score_try(node, nesting)
     if isinstance(node, ast.Match):
-        score = 1 + nesting
-        for case in node.cases:
-            score += _cognitive_score(case, nesting + 1)
-        return score
+        return _score_match(node, nesting)
+    return _flat_score(node, nesting)
+
+
+def _flat_score(node: ast.AST, nesting: int) -> int:
+    """Score non-structural constructs without a nesting penalty."""
     if isinstance(node, ast.IfExp):
         return 1 + nesting + _cognitive_children(node, nesting)
     if isinstance(node, ast.BoolOp):
         return len(node.values) - 1 + _cognitive_children(node, nesting)
     if isinstance(node, ast.comprehension):
-        score = len(node.ifs)
-        score += _cognitive_score(node.iter, nesting)
-        for condition in node.ifs:
-            score += _cognitive_score(condition, nesting)
-        return score
+        return _score_comprehension(node, nesting)
     return _cognitive_children(node, nesting)
+
+
+def _score_loop(node: ast.For | ast.AsyncFor | ast.While, nesting: int) -> int:
+    """Score a loop with its body and optional ``else`` clause."""
+    score = 1 + nesting + _cognitive_body(node.body, nesting + 1)
+    if node.orelse:
+        score += 1 + _cognitive_body(node.orelse, nesting)
+    return score
+
+
+def _score_handler(node: ast.ExceptHandler, nesting: int) -> int:
+    """Score an ``except`` handler, which carries the try's nesting penalty."""
+    return 1 + nesting + _cognitive_body(node.body, nesting + 1)
+
+
+def _score_try(node: ast.Try, nesting: int) -> int:
+    """Score a ``try`` statement; only its handlers add complexity."""
+    score = _cognitive_body(node.body, nesting)
+    score += sum(_cognitive_score(handler, nesting) for handler in node.handlers)
+    score += _cognitive_body(node.orelse, nesting)
+    score += _cognitive_body(node.finalbody, nesting)
+    return score
+
+
+def _score_match(node: ast.Match, nesting: int) -> int:
+    """Score a ``match`` statement and its cases."""
+    score = 1 + nesting
+    for case in node.cases:
+        score += _cognitive_score(case, nesting + 1)
+    return score
+
+
+def _score_comprehension(node: ast.comprehension, nesting: int) -> int:
+    """Score a comprehension; filters are flat, generators recurse."""
+    score = len(node.ifs)
+    score += _cognitive_score(node.iter, nesting)
+    for condition in node.ifs:
+        score += _cognitive_score(condition, nesting)
+    return score
 
 
 def _if_score(node: ast.If, nesting: int) -> int:
@@ -147,36 +177,37 @@ def _max_depth(items: Iterable[ast.AST], depth: int) -> int:
     for statement in items:
         if isinstance(statement, _SCOPE_NODES):
             continue
-        if isinstance(statement, ast.Match):
-            inner = depth + 1
-            deepest = max(deepest, inner)
-            for case in statement.cases:
-                deepest = max(deepest, _max_depth(case.body, inner))
-            continue
-        if isinstance(statement, ast.If):
-            inner = depth + 1
-            deepest = max(deepest, _max_depth(statement.body, inner))
-            if len(statement.orelse) == 1 and isinstance(statement.orelse[0], ast.If):
-                deepest = max(deepest, _max_depth(statement.orelse, depth))
-            else:
-                deepest = max(deepest, _max_depth(statement.orelse, inner))
-            continue
-        if isinstance(statement, ast.Try):
-            inner = depth + 1
-            for group in (statement.body, statement.orelse, statement.finalbody):
-                deepest = max(deepest, _max_depth(group, inner))
-            for handler in statement.handlers:
-                deepest = max(deepest, _max_depth(handler.body, inner))
-            continue
-        if isinstance(statement, _NESTING_NODES):
-            inner = depth + 1
-            deepest = max(
-                deepest,
-                _max_depth(getattr(statement, "body", ()), inner),
-                _max_depth(getattr(statement, "orelse", ()), inner),
-                _max_depth(getattr(statement, "finalbody", ()), inner),
-                _max_depth(getattr(statement, "handlers", ()), inner),
-            )
-        else:
-            deepest = max(deepest, _max_depth(getattr(statement, "body", ()), depth))
+        for group, offset in _child_groups(statement):
+            deepest = max(deepest, _max_depth(group, depth + offset))
     return deepest
+
+
+def _child_groups(statement: ast.AST) -> list[tuple[Iterable[ast.AST], int]]:
+    """Return statement groups to descend into and their nesting offsets.
+
+    ``elif`` chains keep the depth of the original ``if`` (matching cognitive
+    complexity, which does not penalise ``elif``); every other control
+    structure nests its bodies one level deeper.
+    """
+    if isinstance(statement, ast.Match):
+        return [(case.body, 1) for case in statement.cases]
+    if isinstance(statement, ast.If):
+        if len(statement.orelse) == 1 and isinstance(statement.orelse[0], ast.If):
+            return [(statement.body, 1), (statement.orelse, 0)]
+        return [(statement.body, 1), (statement.orelse, 1)]
+    if isinstance(statement, ast.Try):
+        groups: list[tuple[Iterable[ast.AST], int]] = [
+            (statement.body, 1),
+            (statement.orelse, 1),
+            (statement.finalbody, 1),
+        ]
+        groups.extend((handler.body, 1) for handler in statement.handlers)
+        return groups
+    if isinstance(statement, _NESTING_NODES):
+        return [
+            (getattr(statement, "body", ()), 1),
+            (getattr(statement, "orelse", ()), 1),
+            (getattr(statement, "finalbody", ()), 1),
+            (getattr(statement, "handlers", ()), 1),
+        ]
+    return [(getattr(statement, "body", ()), 0)]

@@ -90,17 +90,14 @@ class DependencyGraph:
 
 def _candidate_targets(module: ParsedModule, imported: ImportInfo) -> list[str]:
     """Return possible internal module names referenced by one import."""
-    if not imported.is_from:
+    if not imported.is_from or imported.level == 0:
         return [imported.module]
-    if imported.level == 0:
-        return [imported.module]
+    return _relative_candidates(module, imported)
 
-    package = _package_of(module)
-    parts = package.split(".") if package else []
-    if imported.level > 1:
-        parts = parts[: len(parts) - (imported.level - 1)]
-    prefix = ".".join(parts)
 
+def _relative_candidates(module: ParsedModule, imported: ImportInfo) -> list[str]:
+    """Resolve a relative import against the package of the importing module."""
+    prefix = _relative_prefix(module, imported.level)
     if imported.module:
         return [f"{prefix}.{imported.module}" if prefix else imported.module]
     if prefix and imported.name:
@@ -108,6 +105,15 @@ def _candidate_targets(module: ParsedModule, imported: ImportInfo) -> list[str]:
     if prefix:
         return [prefix]
     return [imported.name] if imported.name else []
+
+
+def _relative_prefix(module: ParsedModule, level: int) -> str:
+    """Return the package a relative import with *level* dots points at."""
+    package = _package_of(module)
+    parts = package.split(".") if package else []
+    if level > 1:
+        parts = parts[: len(parts) - (level - 1)]
+    return ".".join(parts)
 
 
 def _first_resolvable(candidates: Sequence[str], nodes: set[str]) -> str | None:
