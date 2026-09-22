@@ -59,6 +59,23 @@ class Thresholds:
 
 _DEFAULT_HISTORY_COMMITS = 500
 _DEFAULT_BLAME_FILES = 10
+DEFAULT_LLM_MODEL = "ollama/qwen2.5-coder:7b"
+DEFAULT_LLM_TIMEOUT = 60
+DEFAULT_LLM_MAX_FINDINGS = 20
+
+
+@dataclass(frozen=True, slots=True)
+class LlmConfig:
+    """LLM settings for the optional agent layer.
+
+    ``model`` uses litellm's provider prefix (``ollama/...``, ``gemini/...``,
+    ``gpt-4o-mini``, ...). API keys are read from the environment by litellm
+    and are never stored in configuration.
+    """
+
+    model: str = DEFAULT_LLM_MODEL
+    timeout: int = DEFAULT_LLM_TIMEOUT
+    max_findings: int = DEFAULT_LLM_MAX_FINDINGS
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +88,7 @@ class AnalysisConfig:
     use_git_history: bool = True
     history_commits: int = _DEFAULT_HISTORY_COMMITS
     blame_files: int = _DEFAULT_BLAME_FILES
+    llm: LlmConfig = field(default_factory=LlmConfig)
 
 
 CONFIG_FILENAMES = ("repomind.toml", "pyproject.toml")
@@ -82,6 +100,7 @@ _SECTION_KEYS = frozenset(
         "use_git_history",
         "history_commits",
         "blame_files",
+        "llm",
     }
 )
 
@@ -158,6 +177,7 @@ def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
         use_git_history=_parse_bool(table, "use_git_history", default=True),
         history_commits=_parse_history_commits(table),
         blame_files=_parse_blame_files(table),
+        llm=_parse_llm(table),
     )
 
 
@@ -212,6 +232,47 @@ def _parse_blame_files(table: dict[str, Any]) -> int:
         raise ConfigurationError("'blame_files' must be an integer")
     if value < 0:
         raise ConfigurationError("'blame_files' must be zero or a positive integer")
+    return value
+
+
+def _parse_llm(table: dict[str, Any]) -> LlmConfig:
+    """Validate the optional ``[llm]`` table."""
+    if "llm" not in table:
+        return LlmConfig()
+    raw = table["llm"]
+    if not isinstance(raw, dict):
+        raise ConfigurationError("'llm' must be a table")
+    _reject_unknown_llm_keys(raw)
+    return LlmConfig(
+        model=_parse_llm_model(raw),
+        timeout=_parse_llm_positive_int(raw, "timeout", DEFAULT_LLM_TIMEOUT),
+        max_findings=_parse_llm_positive_int(raw, "max_findings", DEFAULT_LLM_MAX_FINDINGS),
+    )
+
+
+def _reject_unknown_llm_keys(raw: dict[str, Any]) -> None:
+    """Reject unknown ``[llm]`` keys, including accidentally stored API keys."""
+    valid = {"model", "timeout", "max_findings"}
+    unknown = sorted(set(raw) - valid)
+    if unknown:
+        raise ConfigurationError(
+            f"unknown llm keys: {', '.join(unknown)} (valid keys: {', '.join(sorted(valid))})"
+        )
+
+
+def _parse_llm_model(raw: dict[str, Any]) -> str:
+    """Validate the ``[llm]`` model identifier."""
+    model = raw.get("model", DEFAULT_LLM_MODEL)
+    if not isinstance(model, str) or not model.strip():
+        raise ConfigurationError("'llm.model' must be a non-empty string")
+    return model
+
+
+def _parse_llm_positive_int(raw: dict[str, Any], key: str, default: int) -> int:
+    """Validate a positive integer ``[llm]`` setting."""
+    value = raw.get(key, default)
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        raise ConfigurationError(f"'llm.{key}' must be a positive integer")
     return value
 
 

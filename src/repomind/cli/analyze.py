@@ -2,25 +2,17 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
 import typer
-from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
+from repomind.cli.common import build_config, resolve_baseline, run_engine
 from repomind.cli.console import console
-from repomind.config import AnalysisConfig, load_config
-from repomind.core.baseline import BASELINE_FILENAME, Baseline, load_baseline
-from repomind.core.engine import (
-    AnalysisOptions,
-    AnalysisResult,
-    AnalysisScope,
-    StageUpdate,
-    analyze_repository,
-)
-from repomind.errors import ConfigurationError, RepoMindError
+from repomind.core.baseline import Baseline
+from repomind.core.engine import AnalysisOptions, AnalysisResult, AnalysisScope
+from repomind.errors import RepoMindError
 from repomind.git.diff import changed_paths
 from repomind.models.enums import Severity
 from repomind.models.findings import Finding
@@ -153,11 +145,11 @@ def analyze(
 ) -> None:
     """Analyze a Python repository and report on code health."""
     try:
-        config = _build_config(path, config_path, exclude or [])
-        baseline = _resolve_baseline(path, baseline_path, use_baseline=not no_baseline)
+        config = build_config(path, config_path, exclude or [])
+        baseline = resolve_baseline(path, baseline_path, use_baseline=not no_baseline)
         changed = changed_paths(path, since) if since is not None else None
         options = _analysis_options(baseline, changed, since)
-        result = _run_analysis(path, config, history, options)
+        result = run_engine(path, config, use_history=history, options=options)
     except RepoMindError as error:
         console.print(f"[bold red]error:[/bold red] {error}")
         raise typer.Exit(code=2) from error
@@ -194,35 +186,6 @@ def _gate_failures(
     return failures
 
 
-def _resolve_baseline(
-    path: Path,
-    baseline_path: Path | None,
-    *,
-    use_baseline: bool,
-) -> Baseline | None:
-    """Load the requested baseline file, or auto-detect one in the repository."""
-    if not use_baseline:
-        return None
-    candidate = baseline_path or (path / BASELINE_FILENAME)
-    if not candidate.is_file():
-        if baseline_path is not None:
-            raise ConfigurationError(f"baseline file not found: {candidate}")
-        return None
-    return load_baseline(candidate)
-
-
-def _build_config(
-    path: Path,
-    config_path: Path | None,
-    exclude: list[str],
-) -> AnalysisConfig:
-    """Load configuration and merge CLI exclude patterns into it."""
-    config = load_config(path, config_file=config_path)
-    if exclude:
-        config = replace(config, exclude=(*config.exclude, *exclude))
-    return config
-
-
 def _analysis_options(
     baseline: Baseline | None,
     changed: frozenset[str] | None,
@@ -235,46 +198,6 @@ def _analysis_options(
         else None
     )
     return AnalysisOptions(baseline=baseline, scope=scope)
-
-
-def _run_analysis(
-    path: Path,
-    config: AnalysisConfig,
-    history: bool | None,
-    options: AnalysisOptions,
-) -> AnalysisResult:
-    """Run the engine while rendering a live progress spinner."""
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        console=console,
-        transient=True,
-    ) as progress:
-        task_id = progress.add_task("Discovering Python files...", total=None)
-
-        def on_stage(update: StageUpdate) -> None:
-            progress.update(
-                task_id,
-                description=_stage_label(update),
-                total=update.total or None,
-                completed=update.current if update.total else 0,
-            )
-
-        return analyze_repository(
-            path,
-            config=config,
-            use_history=history,
-            options=options,
-            progress=on_stage,
-        )
-
-
-def _stage_label(update: StageUpdate) -> str:
-    """Format a stage update as a progress description."""
-    if update.total:
-        return f"{update.stage.capitalize()} ({update.current}/{update.total})..."
-    return f"{update.stage.capitalize()}..."
 
 
 def _emit_report(

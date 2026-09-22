@@ -73,8 +73,8 @@ Two escape hatches keep the analysis actionable without hiding anything:
   tradeoff is that genuinely dead decorated helpers are not reported.
 
 Both behaviours are exercised by RepoMind itself: `repomind.toml` excludes the
-intentionally broken test fixtures and suppresses the two CLI declaration
-findings for `src/repomind/cli/analyze.py` with an inline justification.
+intentionally broken test fixtures and suppresses the CLI declaration-surface
+findings for `src/repomind/cli/*.py` with an inline justification.
 
 ## Baseline and incremental adoption
 

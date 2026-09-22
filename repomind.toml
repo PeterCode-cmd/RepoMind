@@ -4,11 +4,9 @@
 # exercise every rule, so it must not count towards RepoMind's own health.
 exclude = ["tests/fixtures"]
 
-# `repomind.cli.analyze.analyze` is a Typer declaration surface: one
-# parameter per CLI flag with rich help text and no logic (it delegates to
-# small helpers). Both findings below describe the CLI framework, not the
-# quality of this code.
+# Typer commands are declaration surfaces: one parameter per CLI flag with
+# rich help text and no logic (they delegate to small helpers).
 ignore = [
-    "maintainability/too-many-parameters@src/repomind/cli/analyze.py",
-    "maintainability/long-function@src/repomind/cli/analyze.py",
+    "maintainability/too-many-parameters@src/repomind/cli/*.py",
+    "maintainability/long-function@src/repomind/cli/*.py",
 ]

@@ -119,3 +119,33 @@ def test_repository_own_configuration_is_valid() -> None:
     config = load_config(root)
     assert "tests/fixtures" in config.exclude
     assert config.ignore
+
+
+def test_llm_config_is_loaded(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "repomind.toml",
+        '[llm]\nmodel = "gemini/gemini-3.8-flash"\ntimeout = 30\nmax_findings = 5\n',
+    )
+
+    config = load_config(tmp_path)
+
+    assert config.llm.model == "gemini/gemini-3.8-flash"
+    assert config.llm.timeout == 30
+    assert config.llm.max_findings == 5
+
+
+def test_llm_defaults_are_used(tmp_path: Path) -> None:
+    config = load_config(tmp_path)
+    assert config.llm.model.startswith("ollama/")
+
+
+def test_llm_api_keys_are_rejected(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", '[llm]\napi_key = "secret"\n')
+    with pytest.raises(ConfigurationError, match="unknown llm keys"):
+        load_config(tmp_path)
+
+
+def test_invalid_llm_timeout_is_rejected(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", "[llm]\ntimeout = 0\n")
+    with pytest.raises(ConfigurationError, match=r"'llm\.timeout'"):
+        load_config(tmp_path)

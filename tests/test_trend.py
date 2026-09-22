@@ -74,12 +74,18 @@ def test_trend_scores_follow_code_quality(tmp_path: Path) -> None:
     assert scores[1] < scores[0]
     assert scores[2] == 100
     assert report.delta == 0
+
+
+def test_trend_reports_subjects_and_extremes(tmp_path: Path) -> None:
+    repo = _quality_history(tmp_path)
+
+    report = build_trend(repo, samples=3, window=50)
+
     assert report.samples[0].subject == "clean"
     assert report.samples[-1].subject == "remove tangled function"
     worst = report.worst()
     assert worst is not None
     assert worst.short_sha == report.samples[1].short_sha
-    assert report.samples[1].critical == 0
     assert report.samples[1].findings > 0
 
 

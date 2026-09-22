@@ -138,6 +138,7 @@ ignore = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
+"src/repomind/agents/client.py" = ["PLC0415"]
 "src/repomind/core/complexity.py" = ["PLR0911"]
 "tests/**" = ["ANN", "ARG001", "ARG002", "D", "PLR2004", "S101", "S603", "S607"]
 
@@ -149,3 +150,7 @@ warn_unreachable = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
+
+[[tool.mypy.overrides]]
+module = ["litellm", "litellm.*"]
+ignore_missing_imports = true

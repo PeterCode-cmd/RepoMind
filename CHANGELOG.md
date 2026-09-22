@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rule, plus afferent/efferent coupling and instability per module in reports.
 - `repomind trend`: health score across sampled commits, each analyzed in a
   detached Git worktree, with terminal, Markdown and JSON output.
+- `repomind explain` and `repomind review`: optional LLM agents that consume
+  the prepared findings (metrics, caller counts, churn) and never raw source.
+  Ollama is the default backend, cloud providers work through litellm with an
+  API key from the environment, and every command degrades to a deterministic
+  summary without the `llm` extra. Model answers are validated and citations
+  outside the context are dropped. Configuration via `[llm]` (`model`,
+  `timeout`, `max_findings`); API keys are rejected in configuration files.
 
 ## [0.1.0] - 2026-09-22
 
