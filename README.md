@@ -33,6 +33,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Dependencies | import cycles (strongly connected components), external package usage, hub modules |
 | History | churn per file, authors, recency, and **complexity × churn hotspots** |
 | Correctness | files that fail to parse |
+| Configuration | path excludes, per-rule `ignore` entries, per-repo thresholds |
 
 Reports: rich terminal output, Markdown for pull requests, JSON for automation
 (`--fail-under` turns RepoMind into a CI quality gate).
@@ -62,47 +63,35 @@ repomind analyze /path/to/repository
 ```text
 ╭──────────────────────────────── RepoMind ─────────────────────────────────╮
 │ Repository   /home/dev/RepoMind                                           │
-│ Python code  45 files | 3,235 source lines                                │
-│ Duration     0.49 s                                                       │
+│ Python code  50 files | 3,700 source lines                                │
+│ Duration     0.46 s                                                       │
 │ Git history  analyzed                                                     │
 ╰───────────────────────────────────────────────────────────────────────────╯
 
-████████░░  86/100 | grade B
+██████████  100/100 | grade A
 
-Severity                          Category
- Level     Count                    Group           Count
- HIGH          3                    complexity         18
- MEDIUM       21                    dead-code           1
- LOW           1                    history             2
-                                   maintainability     4
-
-Top findings (6 of 25)
- Severity   Rule                                 Location                            Message
- HIGH       maintainability/too-many-parameters  src/repomind/cli/app.py:82          `repomind.cli.app.analyze` takes 9 parameters
- HIGH       complexity/high-cognitive-complexity src/repomind/core/complexity.py:144 `repomind.core.complexity._max_depth` has cognitive
-                                                                                    complexity 26 (warn >= 15).
- HIGH       complexity/high-cyclomatic-comple... src/repomind/git/history.py:90      `repomind.git.history.analyze_history` has
-                                                                                    cyclomatic complexity 16 (warn >= 10).
- ...
+No findings above the configured thresholds.
+2 finding(s) suppressed by configuration (details in --format json).
 
 Dependency graph
  Metric            Value
- Internal modules     45
- Internal imports    100
+ Internal modules     50
+ Internal imports    118
  Import cycles         0
  External packages    23
 
-Change hotspots (last 6 commits on master)
- File                               Commits   Churn   Authors   Last change   Heat
- src/repomind/core/complexity.py          6     187         1   2026-09-22     100
- src/repomind/core/pyparser.py            1     347         1   2026-09-22      66
- src/repomind/cli/app.py                  1     280         1   2026-09-22      53
+Change hotspots (last 5 commits on master)
+ File                              Commits   Churn   Authors   Last change   Heat
+ src/repomind/core/pyparser.py           3     423         1   2026-09-22     100
+ src/repomind/cli/app.py                 2     500         1   2026-09-22      94
+ src/repomind/core/engine.py             3     296         1   2026-09-22      70
 
 Tip: use --format markdown --output report.md for a shareable report or --format json for machine-readable output.
 ```
 
 Output above is trimmed and uncolored; borders and the score bar adapt to your
-terminal's encoding.
+terminal's encoding. The two suppressed entries are deliberate and explained in
+[Dogfooding](#dogfooding).
 
 Generate shareable reports:
 
@@ -136,6 +125,10 @@ Drop a `repomind.toml` at the repository root, or use `[tool.repomind]` in
 ```toml
 [tool.repomind]
 exclude = ["migrations", "*/generated/*"]
+ignore = [
+    "maintainability/too-many-parameters@src/app/cli.py",
+    "dead-code/unused-import",
+]
 use_git_history = true
 history_commits = 500
 
@@ -149,6 +142,11 @@ hotspot_min_commits = 5
 ```
 
 Unknown keys are rejected loudly, so typos never silently change your analysis.
+
+`ignore` entries silence known, accepted findings: `rule-id` suppresses a rule
+everywhere, `rule-id@glob` only for matching paths. Suppressed findings never
+disappear silently — every report shows how many were suppressed and
+`--format json` lists them in full.
 
 ## How the health score works
 
@@ -185,11 +183,35 @@ Rules never read files: they consume prepared metrics, graphs and history, which
 keeps them fast, deterministic and easy to test. See
 [docs/architecture.md](docs/architecture.md) for details and extension guides.
 
+## Dogfooding
+
+RepoMind analyzes itself in CI:
+
+```console
+repomind analyze . --no-history --fail-under 95
+```
+
+The repository ships a `repomind.toml` with two deliberate decisions:
+
+- `exclude = ["tests/fixtures"]` — the sample project is *intentionally broken*
+  (that is its job), so it must not count towards RepoMind's own health.
+- two `ignore` entries for `src/repomind/cli/analyze.py` — a Typer command is a
+  declaration surface (one parameter per flag, rich help text, no logic), so
+  parameter count and function length describe the CLI framework, not the code.
+
+Everything else is clean: **100/100 (grade A)**, zero findings, zero import
+cycles. The score only became meaningful after the exclusions above; before
+them, RepoMind was grading its own test fixtures.
+
 ## Roadmap
 
 - [x] MVP: CLI, static analysis, dependency graph, terminal + Markdown reports
 - [x] Git history analysis with complexity × churn hotspots
 - [x] JSON output and `--fail-under` CI gate
+- [x] Configurable suppression (`ignore`) and decorator-aware dead-code detection
+- [ ] Baseline + `--fail-on-new` for incremental adoption in legacy repositories
+- [ ] Diff mode (`--since`, `--diff`) for pull-request reviews
+- [ ] SARIF output and a GitHub Action
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation
 - [ ] Streamlit dashboard

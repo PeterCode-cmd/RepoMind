@@ -1,0 +1,14 @@
+# Configuration used when RepoMind analyzes itself.
+#
+# `tests/fixtures/sample_project` is intentionally broken: it exists to
+# exercise every rule, so it must not count towards RepoMind's own health.
+exclude = ["tests/fixtures"]
+
+# `repomind.cli.analyze.analyze` is a Typer declaration surface: one
+# parameter per CLI flag with rich help text and no logic (it delegates to
+# small helpers). Both findings below describe the CLI framework, not the
+# quality of this code.
+ignore = [
+    "maintainability/too-many-parameters@src/repomind/cli/analyze.py",
+    "maintainability/long-function@src/repomind/cli/analyze.py",
+]

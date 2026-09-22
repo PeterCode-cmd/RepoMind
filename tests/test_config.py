@@ -112,3 +112,10 @@ def test_thresholds_are_frozen() -> None:
     thresholds = Thresholds()
     with pytest.raises(AttributeError):
         thresholds.cyclomatic_warn = 99  # type: ignore[misc]
+
+
+def test_repository_own_configuration_is_valid() -> None:
+    root = Path(__file__).resolve().parents[1]
+    config = load_config(root)
+    assert "tests/fixtures" in config.exclude
+    assert config.ignore

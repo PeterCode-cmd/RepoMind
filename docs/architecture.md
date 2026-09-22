@@ -20,9 +20,10 @@ the CLI, and nothing in the rule layer reads files.
 | Graph | `core/graph.py` | Directed module graph from import statements. Relative imports are resolved against the package of the importing module. Cycles are strongly connected components. |
 | History | `git/history.py` | Walks up to N commits, accumulating per-file commits, churn, authors and recency. Returns `None` outside Git repositories. |
 | Rules | `core/rules/` | Each rule is a small class satisfying the `Rule` protocol and receiving an `AnalysisContext`. Rule failures are isolated and reported as warnings. |
+| Suppression | `core/suppression.py` | Applies configured `ignore` entries after rules and before scoring. Suppressed findings stay visible as a count (and in full in JSON). |
 | Scoring | `core/scoring.py` | Converts findings into a size-normalised 0–100 health score with a letter grade. |
 | Reporting | `reporters/` | Terminal (Rich), Markdown and JSON renderers. All three consume the same `AnalysisResult`. |
-| CLI | `cli/app.py` | Typer commands (`analyze`, `rules`), progress rendering, exit codes. |
+| CLI | `cli/app.py`, `cli/analyze.py` | Typer commands (`analyze`, `rules`), progress rendering, exit codes. |
 
 ## Why these design decisions
 
@@ -48,6 +49,25 @@ functions) for very few false positives.
 **Windows-first tolerance.** Source files are read with `tokenize.open` (PEP 263
 encoding cookies and BOMs are handled), paths are compared after `resolve()`,
 and reports avoid terminal-width assumptions.
+
+## Suppression and decorator exemptions
+
+Two escape hatches keep the analysis actionable without hiding anything:
+
+- **`ignore` entries** (`rule-id` or `rule-id@glob`) remove findings from
+  scoring and from the main report. Suppressed findings are always counted in
+  terminal/Markdown output and listed in full in the JSON output, so a
+  suppression can never silently swallow a regression. Entries referencing an
+  unknown rule produce a warning instead of failing the run.
+- **Decorated private definitions** are exempt from the dead-code rule.
+  Decorators register callables with frameworks (Typer commands, pytest
+  fixtures, event handlers), so the code never references them by name; without
+  the exemption every framework entry point would be a false positive. The
+  tradeoff is that genuinely dead decorated helpers are not reported.
+
+Both behaviours are exercised by RepoMind itself: `repomind.toml` excludes the
+intentionally broken test fixtures and suppresses the two CLI declaration
+findings for `src/repomind/cli/analyze.py` with an inline justification.
 
 ## Adding a rule
 
@@ -84,8 +104,12 @@ The formula is intentionally simple and documented: a repository with one
 ## Known limitations
 
 - Python only (for now); dynamic dispatch, `getattr` with computed names and
-  plugin registries can hide usage from the dead-code rule.
+  plugin registries can hide usage from the dead-code rule. Decorated private
+  definitions are exempt from dead-code analysis (see above).
 - Import resolution is best-effort: modules outside the analyzed root are
   reported as external packages rather than resolved.
 - History analysis reads at most `history_commits` commits (default 500) for
   predictable runtime on large repositories.
+- `ignore` entries are exact rule ids plus path globs; there is no severity
+  override or inline `# noqa`-style pragma yet (planned alongside the baseline
+  and diff features).

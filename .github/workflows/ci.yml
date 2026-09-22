@@ -42,3 +42,6 @@ jobs:
 
       - name: Tests
         run: pytest --cov --cov-report=term-missing
+
+      - name: Dogfood (RepoMind on itself)
+        run: repomind analyze . --no-history --fail-under 95
