@@ -45,6 +45,7 @@ semantic = [
 ]
 llm = [
     "litellm>=1.52",
+    "tenacity>=9.0",
 ]
 dashboard = [
     "streamlit>=1.40",

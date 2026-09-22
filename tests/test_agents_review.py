@@ -13,12 +13,14 @@ class FakeClient:
 
     def __init__(self, response: str) -> None:
         self.response = response
+        self.calls: list[tuple[str, str]] = []
 
     @property
     def model(self) -> str:
         return "fake/model"
 
     def complete(self, *, system: str, user: str) -> str:
+        self.calls.append((system, user))
         return self.response
 
 
@@ -44,10 +46,11 @@ def test_model_items_are_validated(sample_project: Path) -> None:
         '"rationale": "made up", "action": "n/a"}'
         "]}"
     )
+    client = FakeClient(response)
 
     notes = review_findings(
         _result(sample_project),
-        client=FakeClient(response),
+        client=client,
         model="fake/model",
         limit=10,
     )
@@ -56,6 +59,11 @@ def test_model_items_are_validated(sample_project: Path) -> None:
     assert [item.path for item in notes.items] == ["samplepkg/god.py"]
     assert notes.items[0].line == 12
     assert any("unknown paths" in note for note in notes.notes)
+    system, user = client.calls[0]
+    assert "never invent" in system
+    assert "callers" in user
+    assert "generated" in user
+    assert "samplepkg/god.py" in user
 
 
 def test_empty_findings_short_circuit(tmp_path: Path) -> None:
