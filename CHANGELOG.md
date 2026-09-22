@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `repomind doctor`: environment diagnostics (Python, configuration, Git,
+  optional extras, semantic index, model backend) with actionable hints.
+- Stable Python API (`repomind.api`): `analyze`, `search_code`,
+  `build_search_index`, `explain_finding`, `review_findings` and the domain
+  types, documented as the supported surface under semantic versioning.
+- `docs/ai.md`: provider matrix, privacy and cost notes, configuration
+  reference and troubleshooting for the semantic and agent layers.
+
+### Changed
+
+- README rewritten around how to use the tool: install matrix for the extras,
+  a command reference with requirements per command, semantic search and agent
+  walkthroughs, a library usage section and a troubleshooting table.
+- `--help` texts now state the required extras, the default model and the
+  model download; the root help lists the common flows.
+
 ## [0.2.0] - 2026-09-22
 
 ### Fixed

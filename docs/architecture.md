@@ -29,8 +29,12 @@ the CLI, and nothing in the rule layer reads files.
 | Suppression | `core/suppression.py` | Applies configured `ignore` entries after rules and before scoring. Suppressed findings stay visible as a count (and in full in JSON). |
 | Baseline | `core/baseline.py` | Splits findings into known/new against accepted fingerprints, powering `--fail-on-new` for legacy adoption. |
 | Scoring | `core/scoring.py` | Converts findings into a size-normalised 0–100 health score with a letter grade. |
+| Semantic | `semantic/` | AST-aware chunks (`chunking.py`), dependency-free BM25 search (`search.py`), pluggable embedders (`embedder.py`: fastembed locally or litellm for APIs) and an incremental local vector store under `.repomind/` (`store.py`, `index.py`). |
+| Agents | `agents/` | Context packs built from prepared facts (`context.py`), a provider-agnostic LLM client (`client.py`, litellm: Ollama or cloud), prompts and validation (`prompts.py`, `parsing.py`) and the `explain`/`review` agents. |
+| Diagnostics | `core/doctor.py` | Environment checks behind `repomind doctor`: Python, configuration, Git, optional extras, index and model backend, each with an actionable hint. |
+| Public API | `api.py` | The stable, documented Python surface (`analyze`, `search_code`, `build_search_index`, `explain_finding`, `review_findings` plus the domain types); everything else is internal. |
 | Reporting | `reporters/` | Terminal (Rich), Markdown, JSON, SARIF 2.1.0 and self-contained HTML renderers. All consume the same `AnalysisResult`; SARIF carries baseline fingerprints as `partialFingerprints` for code-scanning alert tracking. |
-| CLI | `cli/app.py`, `cli/analyze.py` | Typer commands (`analyze`, `rules`), progress rendering, exit codes. |
+| CLI | `cli/` | Typer commands (`analyze`, `baseline`, `trend`, `search`, `index`, `explain`, `review`, `doctor`, `rules`), progress rendering and exit codes. |
 
 ## Why these design decisions
 
@@ -128,5 +132,9 @@ The formula is intentionally simple and documented: a repository with one
 - History analysis reads at most `history_commits` commits (default 500) for
   predictable runtime on large repositories.
 - `ignore` entries are exact rule ids plus path globs; there is no severity
-  override or inline `# noqa`-style pragma yet (planned alongside the baseline
-  and diff features).
+  override or inline `# noqa`-style pragma yet.
+- The semantic index stores chunk text, so `.repomind/` can grow to a few
+  megabytes on large repositories; it is gitignored and rebuilt incrementally.
+- Agent quality depends on the chosen model; the guardrails (facts-only
+  context, citation validation, deterministic fallback) bound the damage of a
+  weak model but cannot make it smarter.
