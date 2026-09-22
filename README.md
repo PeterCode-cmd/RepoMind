@@ -274,10 +274,10 @@ configuration, 500-commit window):
 
 | Project | Files | Source lines | Score | Findings | Wall time |
 | --- | ---: | ---: | --- | ---: | ---: |
-| psf/requests | 37 | 8,029 | 66/100 C | 120 | 18.6 s |
-| pallets/flask | 83 | 10,740 | 72/100 C | 129 | 19.7 s |
-| tqdm/tqdm | 65 | 5,901 | 37/100 D | 144 | 18.9 s |
-| psf/black | 351 | 118,690 | 86/100 B | 688 | 22.2 s |
+| psf/requests | 37 | 8,029 | 60/100 C | 159 | 21.9 s |
+| pallets/flask | 83 | 10,740 | 68/100 C | 212 | 25.2 s |
+| tqdm/tqdm | 65 | 5,901 | 30/100 D | 221 | 24.6 s |
+| psf/black | 351 | 118,690 | 85/100 B | 886 | 25.3 s |
 
 The full write-up — methodology, notable findings, and why excluding tests can
 *lower* the score — is in [docs/benchmarks.md](docs/benchmarks.md).
