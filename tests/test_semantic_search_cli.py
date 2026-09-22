@@ -6,9 +6,9 @@ import json
 import shutil
 from pathlib import Path
 
-from tests.conftest import FakeEmbedder
 from typer.testing import CliRunner
 
+from conftest import FakeEmbedder
 from repomind.cli.app import app
 
 runner = CliRunner()

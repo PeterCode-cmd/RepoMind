@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Iterable, Sequence
-from typing import Protocol
+from typing import Protocol, cast
 
 from repomind.config import SemanticConfig
 from repomind.errors import RepoMindError
@@ -75,7 +75,7 @@ class FastEmbedEmbedder:
                 from fastembed import TextEmbedding
             except ImportError as exc:
                 raise MissingSemanticError(SEMANTIC_INSTALL_HINT) from exc
-            self._engine = TextEmbedding(model_name=self._model)
+            self._engine = cast("_TextEmbedding", TextEmbedding(model_name=self._model))
         return self._engine
 
 

@@ -6,8 +6,8 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from tests.conftest import FakeEmbedder
 
+from conftest import FakeEmbedder
 from repomind.core.discovery import find_python_files
 from repomind.core.pyparser import parse_module
 from repomind.errors import RepoMindError
