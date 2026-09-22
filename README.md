@@ -35,8 +35,9 @@ explainable findings, and shareable Markdown/JSON reports.
 | Correctness | files that fail to parse |
 | Configuration | path excludes, per-rule `ignore` entries, per-repo thresholds |
 
-Reports: rich terminal output, Markdown for pull requests, JSON for automation
-(`--fail-under` turns RepoMind into a CI quality gate).
+Reports: rich terminal output, Markdown for pull requests, a self-contained
+HTML report, SARIF for GitHub code scanning, and JSON for automation
+(`--fail-under` and `--fail-on-new` turn RepoMind into a CI quality gate).
 
 ## Quick start
 
@@ -103,6 +104,7 @@ repomind analyze . --exclude migrations --exclude "*_pb2.py"
 repomind analyze . --since main         # review only files changed since main
 repomind analyze . --fail-under 70     # exit code 1 when the score drops
 repomind analyze . --format sarif --output repomind.sarif
+repomind analyze . --format html --output report.html
 repomind rules                          # list every built-in rule
 ```
 
@@ -122,8 +124,8 @@ Useful flags:
 
 | Flag | Description |
 | --- | --- |
-| `-f, --format` | `terminal` (default), `markdown`, `json` or `sarif` |
-| `-o, --output` | write markdown/JSON/SARIF to a file instead of stdout |
+| `-f, --format` | `terminal` (default), `markdown`, `json`, `sarif` or `html` |
+| `-o, --output` | write markdown/JSON/SARIF/HTML to a file instead of stdout |
 | `--min-severity` | hide findings below `info`, `low`, `medium`, `high` or `critical` |
 | `--top` | number of findings shown in the report |
 | `--history/--no-history` | force Git history analysis on/off (default: auto) |
@@ -259,7 +261,7 @@ them, RepoMind was grading its own test fixtures.
 - [x] Baseline + `--fail-on-new` for incremental adoption in legacy repositories
 - [x] Diff mode (`--since`) for pull-request reviews
 - [x] SARIF output and a GitHub Action
-- [ ] HTML report
+- [x] Self-contained HTML report
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation
 - [ ] Streamlit dashboard

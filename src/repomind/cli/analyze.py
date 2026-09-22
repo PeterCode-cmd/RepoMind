@@ -24,6 +24,7 @@ from repomind.errors import ConfigurationError, RepoMindError
 from repomind.git.diff import changed_paths
 from repomind.models.enums import Severity
 from repomind.models.findings import Finding
+from repomind.reporters.html import render_html
 from repomind.reporters.json_reporter import render_json
 from repomind.reporters.markdown import render_markdown
 from repomind.reporters.sarif import render_sarif
@@ -37,6 +38,7 @@ class OutputFormat(StrEnum):
     MARKDOWN = "markdown"
     JSON = "json"
     SARIF = "sarif"
+    HTML = "html"
 
 
 class SeverityOption(StrEnum):
@@ -74,7 +76,11 @@ def analyze(
     ] = None,
     output_format: Annotated[
         OutputFormat,
-        typer.Option("--format", "-f", help="Report format: terminal, markdown, json or sarif."),
+        typer.Option(
+            "--format",
+            "-f",
+            help="Report format: terminal, markdown, json, sarif or html.",
+        ),
     ] = OutputFormat.TERMINAL,
     output: Annotated[
         Path | None,
@@ -288,6 +294,8 @@ def _emit_report(
         text = render_json(result, findings=findings)
     elif output_format is OutputFormat.SARIF:
         text = render_sarif(result, findings=findings)
+    elif output_format is OutputFormat.HTML:
+        text = render_html(result, findings=findings)
     else:
         text = render_markdown(result, findings=findings, top=top)
 
