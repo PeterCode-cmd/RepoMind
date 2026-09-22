@@ -8,12 +8,13 @@ repository RepoMind walks the filesystem itself.
 
 from __future__ import annotations
 
-import fnmatch
 from collections.abc import Sequence
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from git import InvalidGitRepositoryError, NoSuchPathError, Repo
 from git.exc import GitCommandError
+
+from repomind.core.paths import matches_patterns
 
 DEFAULT_EXCLUDED_DIRS = frozenset(
     {
@@ -55,7 +56,7 @@ def find_python_files(root: Path, *, exclude: Sequence[str] = ()) -> list[Path]:
     if discovered is None:
         discovered = _walk_python_files(root)
     selected = [
-        path for path in discovered if not _is_excluded(_relative_path(root, path), exclude)
+        path for path in discovered if not matches_patterns(_relative_path(root, path), exclude)
     ]
     return sorted(selected)
 
@@ -122,23 +123,3 @@ def _has_excluded_dir(relative: Path) -> bool:
 def _relative_path(root: Path, path: Path) -> str:
     """Return the POSIX path of *path* relative to *root*."""
     return path.relative_to(root).as_posix()
-
-
-def _is_excluded(rel_path: str, patterns: Sequence[str]) -> bool:
-    """Return ``True`` when *rel_path* matches any user provided pattern."""
-    if not patterns:
-        return False
-    pure = PurePosixPath(rel_path)
-    for pattern in patterns:
-        cleaned = pattern.strip("/")
-        if not cleaned:
-            continue
-        if fnmatch.fnmatch(rel_path, cleaned):
-            return True
-        if rel_path.startswith(f"{cleaned}/"):
-            return True
-        if "/" not in cleaned and any(fnmatch.fnmatch(part, cleaned) for part in pure.parts):
-            return True
-        if fnmatch.fnmatch(pure.name, cleaned):
-            return True
-    return False

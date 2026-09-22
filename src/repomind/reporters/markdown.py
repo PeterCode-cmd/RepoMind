@@ -35,6 +35,7 @@ def render_markdown(
     lines.extend(_header(result))
     lines.extend(_summary(result, selected))
     lines.extend(_findings_sections(selected, top=top))
+    lines.extend(_suppressed_section(result))
     lines.extend(_dependency_section(result))
     lines.extend(_history_section(result))
     lines.extend(_warnings_section(result))
@@ -71,6 +72,7 @@ def _summary(result: AnalysisResult, findings: Sequence[Finding]) -> list[str]:
             [
                 ["Health score", f"{score.value}/100 (grade {score.grade})"],
                 ["Findings", f"{len(findings)} ({breakdown})"],
+                ["Suppressed", str(len(result.suppressed))],
                 ["Python files", str(result.file_count)],
                 ["Source lines", f"{result.total_loc:,}"],
                 [
@@ -118,6 +120,22 @@ def _findings_sections(findings: Sequence[Finding], *, top: int) -> list[str]:
             lines.append(f"_{len(category_findings) - top} more findings omitted._")
         lines.append("")
     return lines
+
+
+def _suppressed_section(result: AnalysisResult) -> list[str]:
+    """Render the findings that configuration removed from the main report."""
+    if not result.suppressed:
+        return []
+    rows = [
+        [f"`{finding.rule_id}`", f"`{finding.location}`", finding.message]
+        for finding in result.suppressed
+    ]
+    return [
+        f"## Suppressed findings ({len(result.suppressed)})",
+        "",
+        *_table(["Rule", "Location", "Message"], rows),
+        "",
+    ]
 
 
 def _dependency_section(result: AnalysisResult) -> list[str]:

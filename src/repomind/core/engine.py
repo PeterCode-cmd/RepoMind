@@ -25,6 +25,7 @@ from repomind.core.pyparser import parse_module
 from repomind.core.rules import default_rules
 from repomind.core.rules.base import AnalysisContext
 from repomind.core.scoring import HealthScore, compute_health_score
+from repomind.core.suppression import apply_suppressions, parse_suppressions
 from repomind.errors import RepositoryNotFoundError
 from repomind.git.history import HistoryReport, analyze_history
 from repomind.models.enums import Severity
@@ -57,6 +58,7 @@ class AnalysisResult:
     modules: list[ParsedModule]
     graph: DependencyGraph
     findings: list[Finding]
+    suppressed: list[Finding]
     score: HealthScore
     history: HistoryReport | None
     duration_seconds: float
@@ -139,6 +141,7 @@ def analyze_repository(
 
     _notify(progress, "rules", 0, 0)
     findings, warnings = _run_rules(context)
+    findings, suppressed = _apply_suppressions(config, findings, warnings)
     score = compute_health_score(findings, context.total_loc)
 
     return AnalysisResult(
@@ -147,6 +150,7 @@ def analyze_repository(
         modules=modules,
         graph=graph,
         findings=findings,
+        suppressed=suppressed,
         score=score,
         history=history,
         duration_seconds=time.perf_counter() - start,
@@ -161,9 +165,28 @@ def _run_rules(context: AnalysisContext) -> tuple[list[Finding], list[str]]:
     for rule in default_rules():
         try:
             findings.extend(rule.analyze(context))
-        except Exception as exc:
+        except Exception as exc:  # a broken rule must not abort the whole run
             warnings.append(f"rule {rule.id} failed: {exc}")
     return sort_findings(findings), warnings
+
+
+def _apply_suppressions(
+    config: AnalysisConfig,
+    findings: list[Finding],
+    warnings: list[str],
+) -> tuple[list[Finding], list[Finding]]:
+    """Remove findings matched by ``ignore`` entries and warn about typos."""
+    suppressions = parse_suppressions(config.ignore)
+    if not suppressions:
+        return findings, []
+
+    known_rule_ids = {rule.id for rule in default_rules()}
+    warnings.extend(
+        f"ignore entry references unknown rule: {rule_id}"
+        for rule_id in sorted({entry.rule_id for entry in suppressions} - known_rule_ids)
+    )
+
+    return apply_suppressions(findings, suppressions)
 
 
 def _notify(callback: ProgressCallback | None, stage: str, current: int, total: int) -> None:

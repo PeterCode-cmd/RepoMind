@@ -8,6 +8,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from repomind.config import AnalysisConfig
 from repomind.core.engine import AnalysisResult, analyze_repository
 from repomind.reporters.json_reporter import render_json, result_to_dict
 from repomind.reporters.markdown import render_markdown
@@ -53,6 +54,20 @@ def test_json_respects_filters(sample_project: Path) -> None:
     result = _result(sample_project)
     payload = result_to_dict(result, findings=[])
     assert payload["findings"] == []
+
+
+def test_suppressed_findings_are_reported(sample_project: Path) -> None:
+    baseline = _result(sample_project)
+    config = AnalysisConfig(ignore=("design/god-object@samplepkg/god.py",))
+    result = analyze_repository(sample_project, config=config, use_history=False)
+
+    markdown = render_markdown(result)
+    payload = json.loads(render_json(result))
+
+    assert "## Suppressed findings (1)" in markdown
+    assert [finding["rule_id"] for finding in payload["suppressed"]] == ["design/god-object"]
+    assert all(finding["rule_id"] != "design/god-object" for finding in payload["findings"])
+    assert result.score.penalty < baseline.score.penalty
 
 
 def test_terminal_renders_to_console(sample_project: Path) -> None:

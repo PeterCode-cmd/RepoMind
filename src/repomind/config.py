@@ -7,6 +7,7 @@ analyzed repository or under ``[tool.repomind]`` in ``pyproject.toml``::
     exclude = ["migrations/*"]
     use_git_history = true
     history_commits = 500
+    ignore = ["maintainability/too-many-parameters@src/app/cli.py"]
 
     [tool.repomind.thresholds]
     cyclomatic_warn = 12
@@ -19,6 +20,7 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
 
+from repomind.core.suppression import parse_suppression
 from repomind.errors import ConfigurationError
 
 
@@ -59,12 +61,13 @@ class AnalysisConfig:
 
     thresholds: Thresholds = field(default_factory=Thresholds)
     exclude: tuple[str, ...] = ()
+    ignore: tuple[str, ...] = ()
     use_git_history: bool = True
     history_commits: int = 500
 
 
 CONFIG_FILENAMES = ("repomind.toml", "pyproject.toml")
-_SECTION_KEYS = frozenset({"thresholds", "exclude", "use_git_history", "history_commits"})
+_SECTION_KEYS = frozenset({"thresholds", "exclude", "ignore", "use_git_history", "history_commits"})
 
 
 def load_config(root: Path, *, config_file: Path | None = None) -> AnalysisConfig:
@@ -149,6 +152,8 @@ def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
             raise ConfigurationError("'exclude' must be a list of glob patterns")
         exclude = tuple(raw)
 
+    ignore = _parse_ignore(table)
+
     use_git_history = True
     if "use_git_history" in table:
         raw_flag = table["use_git_history"]
@@ -168,9 +173,22 @@ def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
     return AnalysisConfig(
         thresholds=thresholds,
         exclude=exclude,
+        ignore=ignore,
         use_git_history=use_git_history,
         history_commits=history_commits,
     )
+
+
+def _parse_ignore(table: dict[str, Any]) -> tuple[str, ...]:
+    """Validate the ``ignore`` list of ``rule-id`` / ``rule-id@glob`` entries."""
+    if "ignore" not in table:
+        return ()
+    raw = table["ignore"]
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise ConfigurationError("'ignore' must be a list of 'rule-id[@glob]' strings")
+    for entry in raw:
+        parse_suppression(entry)
+    return tuple(raw)
 
 
 def _parse_thresholds(table: object) -> Thresholds:

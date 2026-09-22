@@ -53,6 +53,7 @@ def render_terminal_report(
     _render_health(result, console)
     _render_summary(selected, console)
     _render_findings(selected, console, top=top)
+    _render_suppressed(result, console)
     _render_graph(result, console)
     _render_history(result, console)
     _render_warnings(result, console)
@@ -177,6 +178,16 @@ def _shorten_location(location: str, limit: int = 38) -> str:
     if separator != -1:
         tail = tail[separator + 1 :]
     return f"...{tail}"
+
+
+def _render_suppressed(result: AnalysisResult, console: Console) -> None:
+    """Render a note about findings hidden by configuration."""
+    if not result.suppressed:
+        return
+    console.print(
+        f"[dim]{len(result.suppressed)} finding(s) suppressed by configuration "
+        f"(details in --format json).[/dim]"
+    )
 
 
 def _render_graph(result: AnalysisResult, console: Console) -> None:

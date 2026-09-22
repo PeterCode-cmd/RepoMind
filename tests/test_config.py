@@ -66,6 +66,30 @@ def test_unknown_keys_are_rejected(tmp_path: Path) -> None:
         load_config(tmp_path)
 
 
+def test_ignore_entries_are_loaded(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "repomind.toml",
+        'ignore = ["complexity/deep-nesting@src/app.py", "dead-code/unused-import"]\n',
+    )
+    config = load_config(tmp_path)
+    assert config.ignore == (
+        "complexity/deep-nesting@src/app.py",
+        "dead-code/unused-import",
+    )
+
+
+def test_invalid_ignore_entry_is_rejected(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", 'ignore = ["@src/app.py"]\n')
+    with pytest.raises(ConfigurationError, match="missing rule id"):
+        load_config(tmp_path)
+
+
+def test_ignore_must_be_a_list_of_strings(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", 'ignore = "dead-code/unused-import"\n')
+    with pytest.raises(ConfigurationError, match="'ignore' must be a list"):
+        load_config(tmp_path)
+
+
 def test_unknown_threshold_is_rejected(tmp_path: Path) -> None:
     _write(tmp_path / "repomind.toml", "[thresholds]\nnot_a_threshold = 3\n")
     with pytest.raises(ConfigurationError, match="unknown thresholds"):

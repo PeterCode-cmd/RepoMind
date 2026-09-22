@@ -58,6 +58,7 @@ def result_to_dict(
         },
         "history": _history_to_dict(result),
         "findings": [_finding_to_dict(finding) for finding in selected],
+        "suppressed": [_finding_to_dict(finding) for finding in result.suppressed],
         "warnings": list(result.warnings),
         "duration_seconds": round(result.duration_seconds, 4),
         "thresholds": asdict(result.config.thresholds),
