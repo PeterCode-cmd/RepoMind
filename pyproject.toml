@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "repomind-analyzer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first code intelligence: deep static analysis, repository health and risk hotspots for Python projects."
 readme = "README.md"
 requires-python = ">=3.12"

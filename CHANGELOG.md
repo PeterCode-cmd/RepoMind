@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-22
+
 ### Fixed
 
 - Parsing a repository no longer floods the terminal with `SyntaxWarning`s
@@ -97,5 +99,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project metadata, SARIF `informationUri` and documentation links point at
   the real repository.
 
-[Unreleased]: https://github.com/PeterCode-cmd/RepoMind/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/PeterCode-cmd/RepoMind/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/PeterCode-cmd/RepoMind/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PeterCode-cmd/RepoMind/releases/tag/v0.1.0
