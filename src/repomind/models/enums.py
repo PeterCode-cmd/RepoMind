@@ -34,4 +34,5 @@ class Category(StrEnum):
     DEPENDENCIES = "dependencies"
     SECURITY = "security"
     CORRECTNESS = "correctness"
+    DOCUMENTATION = "documentation"
     HISTORY = "history"

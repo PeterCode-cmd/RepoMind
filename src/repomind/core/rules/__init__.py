@@ -20,6 +20,7 @@ from repomind.core.rules.dead_code_rules import (
 )
 from repomind.core.rules.dependency_rules import CyclicDependencyRule
 from repomind.core.rules.design_rules import GodObjectRule
+from repomind.core.rules.documentation_rules import MissingDocstringRule
 from repomind.core.rules.history_rules import ComplexityHotspotRule
 from repomind.core.rules.maintainability_rules import (
     LargeFileRule,
@@ -50,6 +51,7 @@ def default_rules() -> tuple[Rule, ...]:
         UnusedImportRule(),
         UnusedPrivateFunctionRule(),
         CyclicDependencyRule(),
+        MissingDocstringRule(),
         DynamicExecutionRule(),
         ShellExecutionRule(),
         UnsafeDeserializationRule(),

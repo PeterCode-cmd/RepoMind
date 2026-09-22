@@ -85,6 +85,7 @@ def parse_module(path: Path, root: Path) -> ParsedModule:
         security_signals=collect_security_signals(tree),
         all_exports=exports,
         references=references,
+        has_docstring=ast.get_docstring(tree) is not None,
     )
 
 
@@ -182,6 +183,7 @@ def _function_metrics(
         is_method=is_method,
         class_name=class_name,
         decorators=decorators,
+        has_docstring=ast.get_docstring(node) is not None,
     )
 
 
@@ -228,6 +230,7 @@ def _class_metrics(node: ast.ClassDef, module_name: str) -> ClassMetrics:
         methods=methods,
         attribute_count=len(attributes),
         base_count=len(node.bases),
+        has_docstring=ast.get_docstring(node) is not None,
     )
 
 

@@ -130,6 +130,7 @@ def test_engine_detects_findings_added_after_baseline(tmp_path: Path) -> None:
     module.write_text(
         module.read_text(encoding="utf-8")
         + "\n\ndef extra(a: int, b: int, c: int, d: int, e: int, f: int, g: int) -> int:\n"
+        + '    """Return the sum of the arguments."""\n'
         + "    return a + b + c + d + e + f + g\n",
         encoding="utf-8",
     )

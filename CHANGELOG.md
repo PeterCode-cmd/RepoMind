@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   execution, shell execution, unsafe deserialization, weak hashes, insecure
   temporary files and hardcoded secrets. Import aliases are resolved and secret
   values are never copied into findings.
+- A documentation rule (`documentation/missing-docstring`) for public modules,
+  classes, functions and methods, with private names, framework hooks and test
+  modules exempt.
 
 ## [0.1.0] - 2026-09-22
 

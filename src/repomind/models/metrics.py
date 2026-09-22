@@ -22,6 +22,7 @@ class FunctionMetrics:
     is_method: bool = False
     class_name: str | None = None
     decorators: tuple[str, ...] = ()
+    has_docstring: bool = False
 
     @property
     def is_private(self) -> bool:
@@ -45,6 +46,7 @@ class ClassMetrics:
     methods: list[FunctionMetrics] = field(default_factory=list)
     attribute_count: int = 0
     base_count: int = 0
+    has_docstring: bool = False
 
     @property
     def method_count(self) -> int:
@@ -130,6 +132,7 @@ class ParsedModule:
     security_signals: list[SecuritySignal] = field(default_factory=list)
     all_exports: frozenset[str] = frozenset()
     references: frozenset[str] = frozenset()
+    has_docstring: bool = False
     syntax_error: str | None = None
 
     @property
