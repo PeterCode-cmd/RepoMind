@@ -18,8 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   retry path; without it model calls failed with an import error and silently
   fell back to the deterministic summary.
 - The review prompt now ranks by risk (using `callers` and `churn` when
-  present) and asks the model to report generated, vendored or benchmark data
-  as such instead of treating it as review-worthy code.
+  present), asks the model to report generated, vendored or benchmark data as
+  such instead of treating it as review-worthy code, and merges findings that
+  concern the same symbol into a single item.
 
 ### Added
 
