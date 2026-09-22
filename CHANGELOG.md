@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `llm` extra now includes `tenacity`, which litellm requires for the
   retry path; without it model calls failed with an import error and silently
   fell back to the deterministic summary.
+- litellm's feedback banner no longer leaks to stderr when a retry succeeds
+  after a transient provider failure.
 - The review prompt now ranks by risk (using `callers` and `churn` when
   present), asks the model to report generated, vendored or benchmark data as
   such instead of treating it as review-worthy code, and merges findings that

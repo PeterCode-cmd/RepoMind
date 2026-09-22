@@ -60,3 +60,12 @@ def test_empty_response_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_model_property_is_exposed() -> None:
     client = LiteLLMClient(model="gemini/gemini-3.8-flash")
     assert client.model == "gemini/gemini-3.8-flash"
+
+
+def test_debug_banner_is_suppressed(monkeypatch: pytest.MonkeyPatch) -> None:
+    module, _recorded = _fake_litellm('{"summary": "ok"}')
+    monkeypatch.setitem(sys.modules, "litellm", module)
+
+    LiteLLMClient(model="fake/model").complete(system="system", user="user")
+
+    assert module.suppress_debug_info is True
