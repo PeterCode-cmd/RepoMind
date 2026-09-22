@@ -1,0 +1,71 @@
+"""LLM clients for the agent layer.
+
+The default backend is Ollama (local, free, private); any cloud provider works
+through litellm with the user's own API key taken from the environment
+(``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, ``GEMINI_API_KEY``, ...). Keys are
+never read from RepoMind configuration or written to reports.
+"""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+from repomind.errors import RepoMindError
+
+INSTALL_HINT = 'the llm extra is not installed: pip install "repomind-analyzer[llm]"'
+
+
+class MissingLLMError(RepoMindError):
+    """Raised when the optional ``llm`` extra is not installed."""
+
+
+class LLMClient(Protocol):
+    """Minimal contract every LLM backend must satisfy."""
+
+    @property
+    def model(self) -> str:
+        """Return the model identifier in litellm format."""
+        ...
+
+    def complete(self, *, system: str, user: str) -> str:
+        """Return the raw model response for the given prompts."""
+        ...
+
+
+class LiteLLMClient:
+    """LLM client backed by litellm (Ollama by default, cloud via env keys)."""
+
+    def __init__(self, model: str, timeout: int = 60) -> None:
+        """Store the model identifier and request timeout."""
+        self._model = model
+        self.timeout = timeout
+
+    @property
+    def model(self) -> str:
+        """Return the model identifier in litellm format."""
+        return self._model
+
+    def complete(self, *, system: str, user: str) -> str:
+        """Return the raw model response, importing litellm lazily.
+
+        Raises:
+            MissingLLMError: If the optional ``llm`` extra is not installed.
+            RepoMindError: If the model returns an empty response.
+        """
+        try:
+            import litellm
+        except ImportError as exc:
+            raise MissingLLMError(INSTALL_HINT) from exc
+
+        response = litellm.completion(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            timeout=self.timeout,
+        )
+        content = response.choices[0].message.content
+        if not isinstance(content, str) or not content.strip():
+            raise RepoMindError("the model returned an empty response")
+        return content

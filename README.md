@@ -79,34 +79,34 @@ repomind analyze /path/to/repository
 ```text
 ╭──────────────────────────────── RepoMind ─────────────────────────────────╮
 │ Repository   /home/dev/RepoMind                                           │
-│ Python code  71 files | 6,422 source lines                                │
-│ Duration     4.09 s                                                       │
+│ Python code  88 files | 8,027 source lines                                │
+│ Duration     3.93 s                                                       │
 │ Git history  analyzed                                                     │
 ╰───────────────────────────────────────────────────────────────────────────╯
 
 ██████████  100/100 | grade A
 
 No findings above the configured thresholds.
-2 finding(s) suppressed by configuration (details in --format json).
+7 finding(s) suppressed by configuration (details in --format json).
 
 Dependency graph
  Metric            Value
- Internal modules     71
- Internal imports    204
+ Internal modules     88
+ Internal imports    265
  Import cycles         0
- External packages    25
+ External packages    26
 
-Call graph: 460 functions, 526 call edges
- fan-in repomind.core.engine.analyze_repository (26 callers)
+Call graph: 572 functions, 648 call edges
+ fan-in repomind.core.engine.analyze_repository (33 callers)
+ fan-in repomind.config.load_config (22 callers)
  fan-in repomind.core.pyparser.parse_module (21 callers)
- fan-in repomind.config.load_config (16 callers)
-Most unstable modules: repomind.__main__ (1.00), repomind.git (1.00), repomind.models (1.00)
+Most unstable modules: repomind.__main__ (1.00), repomind.agents (1.00), repomind.git (1.00)
 
-Change hotspots (last 20 commits on master)
+Change hotspots (last 22 commits on master)
  File                              Commits   Churn   Authors   Last change   Heat
  src/repomind/core/engine.py             8     584         1   2026-09-22     100
- src/repomind/core/pyparser.py           6     450         1   2026-09-22      68
- src/repomind/cli/app.py                 3     502         1   2026-09-22      54
+ src/repomind/core/pyparser.py           7     478         1   2026-09-22      78
+ src/repomind/cli/app.py                 4     504         1   2026-09-22      63
 
 Tip: use --format markdown --output report.md for a shareable report or --format json for machine-readable output.
 ```
@@ -269,9 +269,10 @@ The repository ships a `repomind.toml` with two deliberate decisions:
 
 - `exclude = ["tests/fixtures"]` — the sample project is *intentionally broken*
   (that is its job), so it must not count towards RepoMind's own health.
-- two `ignore` entries for `src/repomind/cli/analyze.py` — a Typer command is a
-  declaration surface (one parameter per flag, rich help text, no logic), so
-  parameter count and function length describe the CLI framework, not the code.
+- two `ignore` globs covering the Typer declaration surfaces in
+  `src/repomind/cli/*.py` — a command is one parameter per flag with rich help
+  text and no logic, so parameter count and function length describe the CLI
+  framework, not the code.
 
 Everything else is clean: **100/100 (grade A)**, zero findings, zero import
 cycles. The score only became meaningful after the exclusions above; before

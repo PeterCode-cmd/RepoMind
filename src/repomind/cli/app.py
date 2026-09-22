@@ -9,6 +9,7 @@ from rich import box
 from rich.table import Table
 
 from repomind import __version__
+from repomind.cli.agents import explain, review
 from repomind.cli.analyze import analyze
 from repomind.cli.baseline import baseline
 from repomind.cli.console import console
@@ -24,6 +25,8 @@ app = typer.Typer(
 app.command()(analyze)
 app.command()(baseline)
 app.command()(trend)
+app.command()(explain)
+app.command()(review)
 
 
 def _version_callback(value: bool) -> None:
