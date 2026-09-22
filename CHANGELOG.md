@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reports list the most-called functions.
 - Class cohesion via LCOM4 (`core/cohesion.py`) with a `design/low-cohesion`
   rule, plus afferent/efferent coupling and instability per module in reports.
+- `repomind trend`: health score across sampled commits, each analyzed in a
+  detached Git worktree, with terminal, Markdown and JSON output.
 
 ## [0.1.0] - 2026-09-22
 

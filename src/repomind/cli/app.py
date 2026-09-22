@@ -12,6 +12,7 @@ from repomind import __version__
 from repomind.cli.analyze import analyze
 from repomind.cli.baseline import baseline
 from repomind.cli.console import console
+from repomind.cli.trend import trend
 from repomind.core.rules import default_rules
 
 app = typer.Typer(
@@ -22,6 +23,7 @@ app = typer.Typer(
 )
 app.command()(analyze)
 app.command()(baseline)
+app.command()(trend)
 
 
 def _version_callback(value: bool) -> None:

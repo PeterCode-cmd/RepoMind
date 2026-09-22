@@ -34,6 +34,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Dependencies | import cycles (strongly connected components), external package usage, hub modules |
 | Call graph | function-level call edges; caller counts attached to findings and fan-in leaders in reports |
 | Cohesion & coupling | LCOM4 per class (stub and dunder methods excluded) and afferent/efferent coupling with instability per module |
+| Trend | health score across sampled commits (`repomind trend`), in terminal, Markdown or JSON |
 | Security | `eval`/`exec`, `shell=True` and `os.system`, unsafe pickle/YAML deserialization, weak hashes, `tempfile.mktemp`, hardcoded secrets (values never reported) |
 | Documentation | missing docstrings on public modules, classes, functions and methods (private names, framework hooks and tests exempt) |
 | History | churn per file and per function (`git log -L`), authors, recency, and **complexity × churn hotspots** (function-level when available) |
@@ -127,6 +128,7 @@ repomind analyze . --since main         # review only files changed since main
 repomind analyze . --fail-under 70     # exit code 1 when the score drops
 repomind analyze . --format sarif --output repomind.sarif
 repomind analyze . --format html --output report.html
+repomind trend .                        # health score across sampled commits
 repomind rules                          # list every built-in rule
 ```
 
@@ -290,6 +292,28 @@ configuration, 500-commit window):
 The full write-up — methodology, notable findings, and why excluding tests can
 *lower* the score — is in [docs/benchmarks.md](docs/benchmarks.md).
 
+## Trend
+
+`repomind trend` samples commits, analyzes each one in a detached Git worktree
+(same rules, thresholds and configuration every time) and reports how the
+health score moved. RepoMind on itself:
+
+```text
+Health trend (last 50 commits)
+ Date       Commit  Subject                                  Score  Grade  Findings
+ 2026-09-22 5f1eb37 Add semantic layer and comprehensive ...     87  B            22
+ 2026-09-22 c81f016 Reduce complexity in the analysis core       97  A             5
+ 2026-09-22 8db9318 Add baseline support and --fail-on-new      100  A             1
+ 2026-09-22 eab2bf1 Track function-level churn with git log -L  100  A             0
+ 2026-09-22 32aa381 Add LCOM4 cohesion and instability          100  A             0
+
+Score 87 (5f1eb37) -> 100 (32aa381) (+13)  best 100 (8db9318), worst 87 (5f1eb37)
+```
+
+History and blame stages are skipped per sample (they would be expensive and
+biased by each snapshot's own commit window); use `--samples` and `--commits`
+to trade detail for runtime.
+
 ## Roadmap
 
 - [x] MVP: CLI, static analysis, dependency graph, terminal + Markdown reports
@@ -302,6 +326,7 @@ The full write-up — methodology, notable findings, and why excluding tests can
 - [x] Self-contained HTML report
 - [x] Benchmarks against popular open-source projects ([docs/benchmarks.md](docs/benchmarks.md))
 - [x] Published on PyPI as [`repomind-analyzer`](https://pypi.org/project/repomind-analyzer/) (v0.1.0)
+- [x] Security, documentation, call-graph, cohesion and trend analyses
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation
 - [ ] Streamlit dashboard
