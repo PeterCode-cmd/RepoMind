@@ -39,7 +39,9 @@ Rank by risk, not by severity alone: use "callers" and "churn" when present to
 prefer findings that are both complex and frequently changed. Findings that
 look like generated, vendored or benchmark data (profiling/, generated/,
 vendor/, *_pb2.py, huge data modules) should be reported as such and placed
-last, because they are usually not worth a reviewer's time."""
+last, because they are usually not worth a reviewer's time. When several
+findings concern the same path and symbol, merge them into one item that names
+each rule and combines the evidence instead of repeating the symbol."""
 
 
 def explain_prompt(payload: dict[str, Any]) -> str:

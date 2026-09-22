@@ -63,6 +63,7 @@ def test_model_items_are_validated(sample_project: Path) -> None:
     assert "never invent" in system
     assert "callers" in user
     assert "generated" in user
+    assert "merge them into one item" in user
     assert "samplepkg/god.py" in user
 
 
