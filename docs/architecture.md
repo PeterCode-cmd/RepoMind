@@ -19,6 +19,7 @@ the CLI, and nothing in the rule layer reads files.
 | Signals | `core/signals.py` | Import-alias-aware extraction of security-relevant AST patterns (dynamic execution, shell usage, unsafe deserialization, weak hashes, insecure temp files, hardcoded secrets) so security rules stay AST-free. Secret values are never recorded. |
 | Complexity | `core/complexity.py` | Cyclomatic complexity (McCabe-style), Sonar-inspired cognitive complexity and maximum nesting depth. Nested functions are measured separately. |
 | Graph | `core/graph.py` | Directed module graph from import statements. Relative imports are resolved against the package of the importing module. Cycles are strongly connected components. |
+| Call graph | `core/callgraph.py` | Resolves the call names recorded by the parser to analyzed functions (local names, `self.method`, constructor calls and imported targets) and powers the `callers` count attached to findings. |
 | History | `git/history.py` | Walks up to N commits, accumulating per-file commits, churn, authors and recency. Returns `None` outside Git repositories. |
 | Blame | `git/blame.py` | Tracks the most complex functions of the hottest files with `git log -L`, giving true per-function commit counts, authors and recency. Bounded by `blame_files` (default 10) because line-range walks dominate the cost of the stage. |
 | Diff | `git/diff.py` | Resolves `--since <rev>` to the set of changed Python files (committed, staged, unstaged and untracked), which the engine turns into an analysis scope. |

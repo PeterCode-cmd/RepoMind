@@ -210,6 +210,18 @@ def _dependency_section(result: AnalysisResult) -> list[str]:
         )
         lines.append("")
 
+    call_hubs = result.call_graph.top_fan_in(limit=5)
+    if call_hubs:
+        lines.append("### Most called functions")
+        lines.append("")
+        lines.extend(
+            _table(
+                ["Function", "Callers"],
+                [[symbol, str(count)] for symbol, count in call_hubs],
+            )
+        )
+        lines.append("")
+
     return lines
 
 

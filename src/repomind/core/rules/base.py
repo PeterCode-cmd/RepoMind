@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Protocol
 
 from repomind.config import AnalysisConfig
+from repomind.core.callgraph import CallGraph
 from repomind.core.graph import DependencyGraph
 from repomind.git.blame import FunctionChurn
 from repomind.git.history import HistoryReport
@@ -28,6 +29,7 @@ class AnalysisContext:
     root: Path
     modules: tuple[ParsedModule, ...]
     graph: DependencyGraph
+    call_graph: CallGraph
     config: AnalysisConfig
     history: HistoryReport | None
     function_churn: Mapping[str, FunctionChurn]

@@ -223,6 +223,15 @@ def _render_graph(result: AnalysisResult, console: Console) -> None:
         top_external = ", ".join(name for name, _ in graph.external_imports.most_common(5))
         console.print(f"[dim]Most used external packages:[/dim] {top_external}")
 
+    call_graph = result.call_graph
+    if call_graph.edge_count:
+        console.print(
+            f"[dim]Call graph:[/dim] {call_graph.function_count} functions, "
+            f"{call_graph.edge_count} call edges"
+        )
+        for symbol, count in call_graph.top_fan_in(limit=3):
+            console.print(f"  [dim]fan-in[/dim] {symbol} ({count} callers)")
+
     for cycle in graph.cycles():
         console.print(f"  [bold red]cycle[/bold red] {' <-> '.join(cycle)}")
 

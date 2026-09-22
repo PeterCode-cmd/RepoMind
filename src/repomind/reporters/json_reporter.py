@@ -62,6 +62,7 @@ def result_to_dict(
             "cycles": [list(cycle) for cycle in result.graph.cycles()],
             "external_packages": dict(result.graph.external_imports.most_common()),
         },
+        "call_graph": _call_graph_to_dict(result),
         "history": _history_to_dict(result),
         "function_churn": _function_churn_to_dict(result),
         "baseline": _baseline_to_dict(result),
@@ -97,6 +98,18 @@ def _finding_to_dict(finding: Finding, *, is_new: bool | None = None) -> dict[st
         "suggestion": finding.suggestion,
         "details": finding.details,
         "is_new": is_new,
+    }
+
+
+def _call_graph_to_dict(result: AnalysisResult) -> dict[str, Any]:
+    """Convert call graph statistics into a JSON-serialisable dictionary."""
+    graph = result.call_graph
+    return {
+        "functions": graph.function_count,
+        "edges": graph.edge_count,
+        "top_fan_in": [
+            {"symbol": symbol, "callers": count} for symbol, count in graph.top_fan_in(limit=10)
+        ],
     }
 
 

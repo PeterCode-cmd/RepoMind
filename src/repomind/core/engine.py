@@ -15,11 +15,12 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Collection
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from repomind.config import AnalysisConfig, load_config
 from repomind.core.baseline import Baseline
+from repomind.core.callgraph import CallGraph, build_call_graph
 from repomind.core.discovery import find_python_files
 from repomind.core.graph import DependencyGraph
 from repomind.core.pyparser import parse_module
@@ -75,6 +76,7 @@ class AnalysisResult:
     config: AnalysisConfig
     modules: list[ParsedModule]
     graph: DependencyGraph
+    call_graph: CallGraph
     findings: list[Finding]
     suppressed: list[Finding]
     new_findings: list[Finding]
@@ -99,6 +101,24 @@ class AnalysisResult:
     def findings_at_or_above(self, severity: Severity) -> list[Finding]:
         """Return findings with a severity of at least *severity*."""
         return [finding for finding in self.findings if finding.severity >= severity]
+
+
+@dataclass(frozen=True, slots=True)
+class _RunSetup:
+    """Resolved inputs for one analysis run."""
+
+    options: AnalysisOptions
+    config: AnalysisConfig
+    history_enabled: bool
+    scope: AnalysisScope | None
+
+
+@dataclass(frozen=True, slots=True)
+class _Graphs:
+    """Module dependency graph and function-level call graph."""
+
+    modules: DependencyGraph
+    calls: CallGraph
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,35 +169,50 @@ def analyze_repository(
     if not root.is_dir():
         raise RepositoryNotFoundError(f"{root} is not a directory")
 
-    options = options or AnalysisOptions()
-    config = config or load_config(root)
-    history_enabled = config.use_git_history if use_history is None else use_history
-    scope = options.scope
-
-    files = _discover_files(root, config, progress, only=scope.paths if scope else None)
+    setup = _resolve_run_setup(root, config, use_history, options)
+    only = setup.scope.paths if setup.scope else None
+    files = _discover_files(root, setup.config, progress, only=only)
     modules = _parse_modules(files, root, progress)
-    graph = _build_graph(modules, progress)
-    insights = _collect_git_insights(
-        root, modules, config, enabled=history_enabled, progress=progress
+    graphs, insights = _run_pipeline(
+        root, modules, setup.config, history_enabled=setup.history_enabled, progress=progress
     )
-    context = _build_context(root, modules, graph, config, insights)
-    summary = _analyze_context(context, config, options, progress)
+    context = _build_context(root, modules, graphs, setup.config, insights)
+    summary = _analyze_context(context, setup.config, setup.options, progress)
 
     return AnalysisResult(
         root=root,
-        config=config,
+        config=setup.config,
         modules=modules,
-        graph=graph,
+        graph=graphs.modules,
+        call_graph=graphs.calls,
         findings=summary.findings,
         suppressed=summary.suppressed,
         new_findings=summary.new_findings,
         baseline_size=summary.baseline_size,
-        scope_label=scope.label if scope else None,
+        scope_label=setup.scope.label if setup.scope else None,
         score=summary.score,
         history=insights.history,
         function_churn=insights.function_churn,
         duration_seconds=time.perf_counter() - start,
         warnings=summary.warnings,
+    )
+
+
+def _resolve_run_setup(
+    root: Path,
+    config: AnalysisConfig | None,
+    use_history: bool | None,
+    options: AnalysisOptions | None,
+) -> _RunSetup:
+    """Resolve defaults for configuration, history and scope."""
+    resolved_options = options or AnalysisOptions()
+    resolved_config = config or load_config(root)
+    history_enabled = resolved_config.use_git_history if use_history is None else use_history
+    return _RunSetup(
+        options=resolved_options,
+        config=resolved_config,
+        history_enabled=history_enabled,
+        scope=resolved_options.scope,
     )
 
 
@@ -190,6 +225,7 @@ def _analyze_context(
     """Run rules, apply suppression and baseline, then score the repository."""
     _notify(progress, "rules", 0, 0)
     findings, warnings = _run_rules(context)
+    findings = _enrich_with_callers(findings, context.call_graph)
     findings, suppressed = _apply_suppressions(config, findings, warnings)
     new_findings, baseline_size = _compare_with_baseline(findings, options.baseline)
     score = compute_health_score(findings, context.total_loc)
@@ -201,6 +237,19 @@ def _analyze_context(
         score=score,
         warnings=warnings,
     )
+
+
+def _enrich_with_callers(findings: list[Finding], call_graph: CallGraph) -> list[Finding]:
+    """Attach caller counts to findings that reference analyzed functions."""
+    enriched: list[Finding] = []
+    for finding in findings:
+        if finding.symbol is None or finding.symbol not in call_graph.edges:
+            enriched.append(finding)
+            continue
+        details = dict(finding.details)
+        details["callers"] = call_graph.caller_count(finding.symbol)
+        enriched.append(replace(finding, details=details))
+    return enriched
 
 
 def _discover_files(
@@ -256,6 +305,25 @@ def _collect_history(
     )
 
 
+def _run_pipeline(
+    root: Path,
+    modules: list[ParsedModule],
+    config: AnalysisConfig,
+    *,
+    history_enabled: bool,
+    progress: ProgressCallback | None,
+) -> tuple[_Graphs, _GitInsights]:
+    """Build the code graphs and collect Git insights."""
+    graphs = _Graphs(
+        modules=_build_graph(modules, progress),
+        calls=build_call_graph(modules),
+    )
+    insights = _collect_git_insights(
+        root, modules, config, enabled=history_enabled, progress=progress
+    )
+    return graphs, insights
+
+
 def _collect_git_insights(
     root: Path,
     modules: list[ParsedModule],
@@ -303,7 +371,7 @@ def _collect_function_churn(
 def _build_context(
     root: Path,
     modules: list[ParsedModule],
-    graph: DependencyGraph,
+    graphs: _Graphs,
     config: AnalysisConfig,
     insights: _GitInsights,
 ) -> AnalysisContext:
@@ -311,7 +379,8 @@ def _build_context(
     return AnalysisContext(
         root=root,
         modules=tuple(modules),
-        graph=graph,
+        graph=graphs.modules,
+        call_graph=graphs.calls,
         config=config,
         history=insights.history,
         function_churn=insights.function_churn,

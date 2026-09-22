@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 
+from repomind.core.astutils import call_name
 from repomind.models.metrics import SecuritySignal
 
 _DYNAMIC_EXECUTION_NAMES = frozenset({"eval", "exec"})
@@ -79,19 +80,6 @@ def _node_aliases(node: ast.AST) -> dict[str, str]:
     return {}
 
 
-def _call_name(func: ast.expr) -> str | None:
-    """Return the dotted name of a call target, or ``None`` for expressions."""
-    parts: list[str] = []
-    current: ast.expr = func
-    while isinstance(current, ast.Attribute):
-        parts.append(current.attr)
-        current = current.value
-    if not isinstance(current, ast.Name):
-        return None
-    parts.append(current.id)
-    return ".".join(reversed(parts))
-
-
 def _resolve_alias(name: str, aliases: dict[str, str]) -> str:
     """Rewrite the first segment of *name* through the import alias map."""
     head, separator, tail = name.partition(".")
@@ -101,7 +89,7 @@ def _resolve_alias(name: str, aliases: dict[str, str]) -> str:
 
 def _call_signal(node: ast.Call, aliases: dict[str, str]) -> SecuritySignal | None:
     """Return the security signal for one call expression, if any."""
-    name = _call_name(node.func)
+    name = call_name(node.func)
     if name is None:
         return None
     resolved = _resolve_alias(name, aliases)
@@ -237,5 +225,5 @@ def _keyword_value(node: ast.Call, name: str) -> ast.expr | None:
 
 def _is_safe_loader(value: ast.expr) -> bool:
     """Return ``True`` for ``yaml.SafeLoader``/``CSafeLoader`` style loaders."""
-    name = _call_name(value)
+    name = call_name(value)
     return name is not None and name.endswith("SafeLoader")

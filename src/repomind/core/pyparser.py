@@ -12,6 +12,7 @@ import io
 import tokenize
 from pathlib import Path
 
+from repomind.core.astutils import call_name
 from repomind.core.complexity import (
     cognitive_complexity,
     cyclomatic_complexity,
@@ -183,6 +184,7 @@ def _function_metrics(
         is_method=is_method,
         class_name=class_name,
         decorators=decorators,
+        calls=_collect_calls(node),
         has_docstring=ast.get_docstring(node) is not None,
     )
 
@@ -201,6 +203,26 @@ def _count_parameters(
     count += int(node.args.vararg is not None)
     count += int(node.args.kwarg is not None)
     return count
+
+
+def _collect_calls(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[str, ...]:
+    """Return distinct call targets used directly inside *node*.
+
+    Nested functions, lambdas and classes are measured separately, so their
+    calls are not attributed to the enclosing function.
+    """
+    names: set[str] = set()
+    stack = list(ast.iter_child_nodes(node))
+    while stack:
+        current = stack.pop()
+        if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            continue
+        if isinstance(current, ast.Call):
+            name = call_name(current.func)
+            if name is not None:
+                names.add(name)
+        stack.extend(ast.iter_child_nodes(current))
+    return tuple(sorted(names))
 
 
 def _decorator_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[str, ...]:

@@ -32,6 +32,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Design | god objects (method count, class size, weighted methods per class) |
 | Dead code | unused imports, unreferenced private functions and methods |
 | Dependencies | import cycles (strongly connected components), external package usage, hub modules |
+| Call graph | function-level call edges; caller counts attached to findings and fan-in leaders in reports |
 | Security | `eval`/`exec`, `shell=True` and `os.system`, unsafe pickle/YAML deserialization, weak hashes, `tempfile.mktemp`, hardcoded secrets (values never reported) |
 | Documentation | missing docstrings on public modules, classes, functions and methods (private names, framework hooks and tests exempt) |
 | History | churn per file and per function (`git log -L`), authors, recency, and **complexity × churn hotspots** (function-level when available) |
@@ -76,8 +77,8 @@ repomind analyze /path/to/repository
 ```text
 ╭──────────────────────────────── RepoMind ─────────────────────────────────╮
 │ Repository   /home/dev/RepoMind                                           │
-│ Python code  50 files | 3,700 source lines                                │
-│ Duration     0.46 s                                                       │
+│ Python code  69 files | 6,129 source lines                                │
+│ Duration     2.61 s                                                       │
 │ Git history  analyzed                                                     │
 ╰───────────────────────────────────────────────────────────────────────────╯
 
@@ -88,16 +89,21 @@ No findings above the configured thresholds.
 
 Dependency graph
  Metric            Value
- Internal modules     50
- Internal imports    118
+ Internal modules     69
+ Internal imports    196
  Import cycles         0
- External packages    23
+ External packages    25
 
-Change hotspots (last 5 commits on master)
+Call graph: 441 functions, 502 call edges
+ fan-in repomind.core.engine.analyze_repository (24 callers)
+ fan-in repomind.core.pyparser.parse_module (19 callers)
+ fan-in repomind.config.load_config (16 callers)
+
+Change hotspots (last 19 commits on master)
  File                              Commits   Churn   Authors   Last change   Heat
- src/repomind/core/pyparser.py           3     423         1   2026-09-22     100
- src/repomind/cli/app.py                 2     500         1   2026-09-22      94
- src/repomind/core/engine.py             3     296         1   2026-09-22      70
+ src/repomind/core/engine.py             7     481         1   2026-09-22     100
+ src/repomind/core/pyparser.py           5     428         1   2026-09-22      77
+ src/repomind/cli/app.py                 3     502         1   2026-09-22      70
 
 Tip: use --format markdown --output report.md for a shareable report or --format json for machine-readable output.
 ```

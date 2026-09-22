@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Function-level churn via `git log -L` for the hottest files
   (`blame_files`, default 10): hotspot findings now use a function's own commit
   history, authors and recency, and fall back to file churn when unavailable.
+- A function-level call graph (`core/callgraph.py`) resolving local, method,
+  constructor and imported call targets; findings gain a `callers` count and
+  reports list the most-called functions.
 
 ## [0.1.0] - 2026-09-22
 

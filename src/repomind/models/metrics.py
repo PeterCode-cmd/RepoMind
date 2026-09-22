@@ -22,6 +22,7 @@ class FunctionMetrics:
     is_method: bool = False
     class_name: str | None = None
     decorators: tuple[str, ...] = ()
+    calls: tuple[str, ...] = ()
     has_docstring: bool = False
 
     @property
