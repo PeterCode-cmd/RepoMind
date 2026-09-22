@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Parsing a repository no longer floods the terminal with `SyntaxWarning`s
+  raised by analyzed files, such as test fixtures with invalid escape
+  sequences (both `ast.parse` and the tokenizer were affected).
+- Transient LLM provider failures (rate limits, 5xx) are retried twice with
+  backoff before the deterministic fallback kicks in.
+
 ### Added
 
 - Six security rules (`security/*`) backed by AST signal extraction: dynamic
