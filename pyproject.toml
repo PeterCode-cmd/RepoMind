@@ -1,0 +1,148 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "repomind"
+version = "0.1.0"
+description = "Local-first code intelligence: deep static analysis, repository health and risk hotspots for Python projects."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "RepoMind Contributors" }]
+keywords = [
+    "static-analysis",
+    "code-quality",
+    "complexity",
+    "technical-debt",
+    "refactoring",
+    "cli",
+    "developer-tools",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Typing :: Typed",
+]
+dependencies = [
+    "GitPython>=3.1.43",
+    "networkx>=3.4",
+    "rich>=13.9",
+    "typer>=0.15",
+]
+
+[project.optional-dependencies]
+semantic = [
+    "chromadb>=0.5.20",
+    "sentence-transformers>=3.2",
+]
+llm = [
+    "litellm>=1.52",
+]
+dashboard = [
+    "streamlit>=1.40",
+]
+dev = [
+    "mypy>=1.13",
+    "pre-commit>=4.0",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8.4",
+    "types-networkx>=3.4",
+]
+
+[project.scripts]
+repomind = "repomind.cli.app:main"
+
+[project.urls]
+Homepage = "https://github.com/repomind/repomind"
+Documentation = "https://github.com/repomind/repomind#readme"
+Issues = "https://github.com/repomind/repomind/issues"
+Changelog = "https://github.com/repomind/repomind/releases"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repomind"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["repomind"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+target-version = "py312"
+extend-exclude = ["tests/fixtures"]
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ANN",
+    "ARG",
+    "B",
+    "C4",
+    "D",
+    "DTZ",
+    "E",
+    "F",
+    "I",
+    "N",
+    "PERF",
+    "PL",
+    "PTH",
+    "RET",
+    "RUF",
+    "S",
+    "SIM",
+    "T20",
+    "UP",
+    "W",
+]
+ignore = [
+    "D203",
+    "D213",
+    "PLR0913",
+    "PLR0917",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"src/repomind/core/complexity.py" = ["PLR0911"]
+"tests/**" = ["ANN", "ARG001", "ARG002", "D", "PLR2004", "S101", "S603", "S607"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/repomind"]
+strict = true
+warn_unreachable = true
+warn_unused_ignores = true
+show_error_codes = true
+pretty = true
