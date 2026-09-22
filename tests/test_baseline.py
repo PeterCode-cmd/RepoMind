@@ -14,7 +14,7 @@ from repomind.core.baseline import (
     load_baseline,
     save_baseline,
 )
-from repomind.core.engine import analyze_repository
+from repomind.core.engine import AnalysisOptions, analyze_repository
 from repomind.errors import ConfigurationError
 from repomind.models.enums import Category, Severity
 from repomind.models.findings import Finding
@@ -114,7 +114,9 @@ def test_engine_reports_new_findings_against_baseline(tmp_path: Path) -> None:
     first = analyze_repository(tmp_path, use_history=False)
     baseline = Baseline.from_findings(first.findings)
 
-    second = analyze_repository(tmp_path, use_history=False, baseline=baseline)
+    second = analyze_repository(
+        tmp_path, use_history=False, options=AnalysisOptions(baseline=baseline)
+    )
 
     assert second.baseline_size == baseline.size
     assert second.new_findings == []
@@ -131,7 +133,9 @@ def test_engine_detects_findings_added_after_baseline(tmp_path: Path) -> None:
         + "    return a + b + c + d + e + f + g\n",
         encoding="utf-8",
     )
-    result = analyze_repository(tmp_path, use_history=False, baseline=baseline)
+    result = analyze_repository(
+        tmp_path, use_history=False, options=AnalysisOptions(baseline=baseline)
+    )
 
     assert [finding.rule_id for finding in result.new_findings] == [
         "maintainability/too-many-parameters"

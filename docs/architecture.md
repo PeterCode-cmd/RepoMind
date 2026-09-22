@@ -14,11 +14,12 @@ the CLI, and nothing in the rule layer reads files.
 
 | Stage | Module | Responsibility |
 | --- | --- | --- |
-| Discovery | `core/discovery.py` | Find `.py` files. Inside a Git repository it delegates to `git ls-files`, so `.gitignore` is respected for free; otherwise it walks the tree while skipping caches, virtualenvs and hidden directories. |
+| Discovery | `core/discovery.py` | Find `.py` files. Inside a Git repository it delegates to `git ls-files`, so `.gitignore` is respected for free; otherwise it walks the tree while skipping caches, virtualenvs and hidden directories. In diff mode the discovered set is intersected with the changed paths. |
 | Parsing | `core/pyparser.py` | The only module that touches `ast`. Produces `ParsedModule` objects: functions, classes, imports, references, LOC, `__all__`, and syntax errors (captured, never raised). |
 | Complexity | `core/complexity.py` | Cyclomatic complexity (McCabe-style), Sonar-inspired cognitive complexity and maximum nesting depth. Nested functions are measured separately. |
 | Graph | `core/graph.py` | Directed module graph from import statements. Relative imports are resolved against the package of the importing module. Cycles are strongly connected components. |
 | History | `git/history.py` | Walks up to N commits, accumulating per-file commits, churn, authors and recency. Returns `None` outside Git repositories. |
+| Diff | `git/diff.py` | Resolves `--since <rev>` to the set of changed Python files (committed, staged, unstaged and untracked), which the engine turns into an analysis scope. |
 | Rules | `core/rules/` | Each rule is a small class satisfying the `Rule` protocol and receiving an `AnalysisContext`. Rule failures are isolated and reported as warnings. |
 | Suppression | `core/suppression.py` | Applies configured `ignore` entries after rules and before scoring. Suppressed findings stay visible as a count (and in full in JSON). |
 | Baseline | `core/baseline.py` | Splits findings into known/new against accepted fingerprints, powering `--fail-on-new` for legacy adoption. |

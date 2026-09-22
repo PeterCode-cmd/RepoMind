@@ -14,7 +14,7 @@ needs to call:
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -50,6 +50,22 @@ class StageUpdate:
 ProgressCallback = Callable[[StageUpdate], None]
 
 
+@dataclass(frozen=True, slots=True)
+class AnalysisScope:
+    """Restriction of an analysis run to a set of changed paths."""
+
+    paths: frozenset[str]
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnalysisOptions:
+    """Optional pipeline inputs: accepted findings and an analysis scope."""
+
+    baseline: Baseline | None = None
+    scope: AnalysisScope | None = None
+
+
 @dataclass(slots=True)
 class AnalysisResult:
     """Everything produced by a single analysis run."""
@@ -62,6 +78,7 @@ class AnalysisResult:
     suppressed: list[Finding]
     new_findings: list[Finding]
     baseline_size: int | None
+    scope_label: str | None
     score: HealthScore
     history: HistoryReport | None
     duration_seconds: float
@@ -87,7 +104,7 @@ def analyze_repository(
     *,
     config: AnalysisConfig | None = None,
     use_history: bool | None = None,
-    baseline: Baseline | None = None,
+    options: AnalysisOptions | None = None,
     progress: ProgressCallback | None = None,
 ) -> AnalysisResult:
     """Run the full analysis pipeline over *root*.
@@ -96,10 +113,9 @@ def analyze_repository(
         root: Repository root to analyze.
         config: Explicit configuration; discovered from the repository when
             omitted.
-        use_history: Force Git history analysis on or off. ``None`` (default)
-            follows ``config.use_git_history``.
-        baseline: Accepted findings from an earlier run. When provided,
-            :attr:`AnalysisResult.new_findings` lists everything not accepted.
+        use_history: Force Git history analysis on or off; ``None`` follows
+            the configuration.
+        options: Accepted findings (baseline) and an optional path scope.
         progress: Optional callback receiving :class:`StageUpdate` events.
 
     Returns:
@@ -113,10 +129,12 @@ def analyze_repository(
     if not root.is_dir():
         raise RepositoryNotFoundError(f"{root} is not a directory")
 
+    options = options or AnalysisOptions()
     config = config or load_config(root)
     history_enabled = config.use_git_history if use_history is None else use_history
+    scope = options.scope
 
-    files = _discover_files(root, config, progress)
+    files = _discover_files(root, config, progress, only=scope.paths if scope else None)
     modules = _parse_modules(files, root, progress)
     graph = _build_graph(modules, progress)
     history = _collect_history(root, modules, config, enabled=history_enabled, progress=progress)
@@ -125,7 +143,7 @@ def analyze_repository(
     _notify(progress, "rules", 0, 0)
     findings, warnings = _run_rules(context)
     findings, suppressed = _apply_suppressions(config, findings, warnings)
-    new_findings, baseline_size = _compare_with_baseline(findings, baseline)
+    new_findings, baseline_size = _compare_with_baseline(findings, options.baseline)
     score = compute_health_score(findings, context.total_loc)
 
     return AnalysisResult(
@@ -137,6 +155,7 @@ def analyze_repository(
         suppressed=suppressed,
         new_findings=new_findings,
         baseline_size=baseline_size,
+        scope_label=scope.label if scope else None,
         score=score,
         history=history,
         duration_seconds=time.perf_counter() - start,
@@ -148,10 +167,15 @@ def _discover_files(
     root: Path,
     config: AnalysisConfig,
     progress: ProgressCallback | None,
+    *,
+    only: Collection[str] | None = None,
 ) -> list[Path]:
-    """Run the discovery stage."""
+    """Run the discovery stage, optionally limited to specific paths."""
     _notify(progress, "discovering", 0, 0)
-    return find_python_files(root, exclude=config.exclude)
+    files = find_python_files(root, exclude=config.exclude)
+    if only is None:
+        return files
+    return [path for path in files if path.relative_to(root).as_posix() in only]
 
 
 def _parse_modules(

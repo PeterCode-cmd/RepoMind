@@ -84,6 +84,11 @@ def _summary(result: AnalysisResult, findings: Sequence[Finding]) -> list[str]:
                     if result.baseline_size is not None
                     else []
                 ),
+                *(
+                    [["Scope", f"changed since `{result.scope_label}`"]]
+                    if result.scope_label is not None
+                    else []
+                ),
                 ["Suppressed", str(len(result.suppressed))],
                 ["Python files", str(result.file_count)],
                 ["Source lines", f"{result.total_loc:,}"],

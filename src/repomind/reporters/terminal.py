@@ -73,6 +73,8 @@ def _render_header(result: AnalysisResult, console: Console) -> None:
     )
     info.add_row("Duration", f"{result.duration_seconds:.2f} s")
     info.add_row("Git history", "analyzed" if result.history is not None else "skipped")
+    if result.scope_label is not None:
+        info.add_row("Scope", f"changed since {result.scope_label}")
     console.print(
         Panel(
             info,

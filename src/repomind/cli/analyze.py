@@ -13,8 +13,15 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from repomind.cli.console import console
 from repomind.config import AnalysisConfig, load_config
 from repomind.core.baseline import BASELINE_FILENAME, Baseline, load_baseline
-from repomind.core.engine import AnalysisResult, StageUpdate, analyze_repository
+from repomind.core.engine import (
+    AnalysisOptions,
+    AnalysisResult,
+    AnalysisScope,
+    StageUpdate,
+    analyze_repository,
+)
 from repomind.errors import ConfigurationError, RepoMindError
+from repomind.git.diff import changed_paths
 from repomind.models.enums import Severity
 from repomind.models.findings import Finding
 from repomind.reporters.json_reporter import render_json
@@ -112,6 +119,13 @@ def analyze(
         bool,
         typer.Option("--no-baseline", help="Ignore an existing baseline file."),
     ] = False,
+    since: Annotated[
+        str | None,
+        typer.Option(
+            "--since",
+            help="Only analyze Python files changed since this Git revision.",
+        ),
+    ] = None,
     fail_on_new: Annotated[
         bool,
         typer.Option(
@@ -133,10 +147,15 @@ def analyze(
     try:
         config = _build_config(path, config_path, exclude or [])
         baseline = _resolve_baseline(path, baseline_path, use_baseline=not no_baseline)
-        result = _run_analysis(path, config, history, baseline)
+        changed = changed_paths(path, since) if since is not None else None
+        options = _analysis_options(baseline, changed, since)
+        result = _run_analysis(path, config, history, options)
     except RepoMindError as error:
         console.print(f"[bold red]error:[/bold red] {error}")
         raise typer.Exit(code=2) from error
+
+    if since is not None and result.file_count == 0:
+        console.print(f"[yellow]No Python files changed since {since}.[/yellow]")
 
     findings = result.findings_at_or_above(min_severity.severity)
     _emit_report(result, findings, output_format=output_format, output=output, top=top)
@@ -196,11 +215,25 @@ def _build_config(
     return config
 
 
+def _analysis_options(
+    baseline: Baseline | None,
+    changed: frozenset[str] | None,
+    since: str | None,
+) -> AnalysisOptions:
+    """Combine baseline and diff scope into pipeline options."""
+    scope = (
+        AnalysisScope(paths=changed, label=since)
+        if changed is not None and since is not None
+        else None
+    )
+    return AnalysisOptions(baseline=baseline, scope=scope)
+
+
 def _run_analysis(
     path: Path,
     config: AnalysisConfig,
     history: bool | None,
-    baseline: Baseline | None,
+    options: AnalysisOptions,
 ) -> AnalysisResult:
     """Run the engine while rendering a live progress spinner."""
     with Progress(
@@ -224,7 +257,7 @@ def _run_analysis(
             path,
             config=config,
             use_history=history,
-            baseline=baseline,
+            options=options,
             progress=on_stage,
         )
 

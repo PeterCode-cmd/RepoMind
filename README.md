@@ -100,6 +100,7 @@ repomind analyze . --format markdown --output report.md
 repomind analyze . --format json --output report.json
 repomind analyze . --min-severity high --top 10
 repomind analyze . --exclude migrations --exclude "*_pb2.py"
+repomind analyze . --since main         # review only files changed since main
 repomind analyze . --fail-under 70     # exit code 1 when the score drops
 repomind rules                          # list every built-in rule
 ```
@@ -128,6 +129,7 @@ Useful flags:
 | `-x, --exclude` | glob pattern to skip; repeatable, matches any path segment |
 | `--config` | explicit configuration file |
 | `--baseline` / `--no-baseline` | use or ignore a baseline file (auto-detected by default) |
+| `--since` | only analyze Python files changed since a Git revision (committed + working tree) |
 | `--fail-on-new` | CI gate: exit code 1 for findings not accepted by the baseline |
 | `--fail-under` | CI gate: exit code 1 below the given health score |
 
@@ -224,7 +226,7 @@ them, RepoMind was grading its own test fixtures.
 - [x] JSON output and `--fail-under` CI gate
 - [x] Configurable suppression (`ignore`) and decorator-aware dead-code detection
 - [x] Baseline + `--fail-on-new` for incremental adoption in legacy repositories
-- [ ] Diff mode (`--since`, `--diff`) for pull-request reviews
+- [x] Diff mode (`--since`) for pull-request reviews
 - [ ] SARIF output and a GitHub Action
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation

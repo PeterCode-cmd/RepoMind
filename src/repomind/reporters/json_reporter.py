@@ -64,6 +64,7 @@ def result_to_dict(
         },
         "history": _history_to_dict(result),
         "baseline": _baseline_to_dict(result),
+        "scope": result.scope_label,
         "findings": [
             _finding_to_dict(
                 finding,
