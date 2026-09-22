@@ -25,6 +25,7 @@ htmlcov/
 # RepoMind output
 repomind-report.md
 repomind-report.json
+.repomind/
 
 # Editors and OS
 .idea/

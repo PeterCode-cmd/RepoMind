@@ -46,6 +46,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repomind search`: dependency-free lexical search over AST-aware chunks
   (modules, classes, functions, methods) with BM25 ranking, snake_case and
   camelCase aware tokenization, and JSON output for automation.
+- Semantic search: pluggable embeddings (`fastembed` ONNX locally, or any
+  embedding API through litellm with a key from the environment), an
+  incremental local index under `.repomind/` that re-embeds only changed
+  chunks and invalidates itself on model changes, `repomind index`, and
+  `repomind search --mode semantic`. Configuration via `[semantic]`.
 - `repomind explain` and `repomind review`: optional LLM agents that consume
   the prepared findings (metrics, caller counts, churn) and never raw source.
   Ollama is the default backend, cloud providers work through litellm with an

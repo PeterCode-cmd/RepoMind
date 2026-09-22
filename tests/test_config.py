@@ -149,3 +149,43 @@ def test_invalid_llm_timeout_is_rejected(tmp_path: Path) -> None:
     _write(tmp_path / "repomind.toml", "[llm]\ntimeout = 0\n")
     with pytest.raises(ConfigurationError, match=r"'llm\.timeout'"):
         load_config(tmp_path)
+
+
+def test_semantic_config_is_loaded(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "repomind.toml",
+        '[semantic]\nprovider = "api"\nmodel = "gemini/text-embedding-004"\n'
+        'index_dir = ".idx"\ntop_k = 3\nmin_score = 0.5\n',
+    )
+
+    config = load_config(tmp_path)
+
+    assert config.semantic.provider == "api"
+    assert config.semantic.model == "gemini/text-embedding-004"
+    assert config.semantic.index_dir == ".idx"
+    assert config.semantic.top_k == 3
+    assert config.semantic.min_score == 0.5
+
+
+def test_semantic_defaults_are_used(tmp_path: Path) -> None:
+    config = load_config(tmp_path)
+    assert config.semantic.provider == "fastembed"
+    assert config.semantic.top_k == 8
+
+
+def test_invalid_semantic_provider_is_rejected(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", '[semantic]\nprovider = "magic"\n')
+    with pytest.raises(ConfigurationError, match=r"'semantic\.provider'"):
+        load_config(tmp_path)
+
+
+def test_invalid_semantic_min_score_is_rejected(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", "[semantic]\nmin_score = 2.0\n")
+    with pytest.raises(ConfigurationError, match=r"'semantic\.min_score'"):
+        load_config(tmp_path)
+
+
+def test_unknown_semantic_key_is_rejected(tmp_path: Path) -> None:
+    _write(tmp_path / "repomind.toml", "[semantic]\napi_key = 'secret'\n")
+    with pytest.raises(ConfigurationError, match="unknown semantic keys"):
+        load_config(tmp_path)

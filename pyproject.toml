@@ -40,8 +40,8 @@ dependencies = [
 
 [project.optional-dependencies]
 semantic = [
-    "chromadb>=0.5.20",
-    "sentence-transformers>=3.2",
+    "fastembed>=0.4",
+    "numpy>=1.26",
 ]
 llm = [
     "litellm>=1.52",
@@ -52,6 +52,7 @@ dashboard = [
 ]
 dev = [
     "mypy>=1.13",
+    "numpy>=1.26",
     "pre-commit>=4.0",
     "pytest>=8.3",
     "pytest-cov>=6.0",
@@ -140,8 +141,11 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "src/repomind/agents/client.py" = ["PLC0415"]
+"src/repomind/cli/index.py" = ["PLC0415"]
+"src/repomind/cli/search.py" = ["PLC0415"]
 "src/repomind/core/complexity.py" = ["PLR0911"]
-"tests/**" = ["ANN", "ARG001", "ARG002", "D", "PLR2004", "S101", "S603", "S607"]
+"src/repomind/semantic/embedder.py" = ["PLC0415"]
+"tests/**" = ["ANN", "ARG001", "ARG002", "ARG005", "D", "PLR2004", "S101", "S603", "S607"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -151,6 +155,10 @@ warn_unreachable = true
 warn_unused_ignores = true
 show_error_codes = true
 pretty = true
+
+[[tool.mypy.overrides]]
+module = ["fastembed", "fastembed.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["litellm", "litellm.*"]
