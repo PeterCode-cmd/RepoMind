@@ -33,7 +33,13 @@ Return JSON with exactly these keys:
   - "path": string, must be one of the paths in the context.
   - "line": integer or null.
   - "rationale": string, why this matters, using the measured values.
-  - "action": string, what to do about it."""
+  - "action": string, what to do about it.
+
+Rank by risk, not by severity alone: use "callers" and "churn" when present to
+prefer findings that are both complex and frequently changed. Findings that
+look like generated, vendored or benchmark data (profiling/, generated/,
+vendor/, *_pb2.py, huge data modules) should be reported as such and placed
+last, because they are usually not worth a reviewer's time."""
 
 
 def explain_prompt(payload: dict[str, Any]) -> str:
