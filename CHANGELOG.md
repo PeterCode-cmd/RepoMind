@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Benchmarks against requests, flask, tqdm and black, with methodology and
+  limitations (`docs/benchmarks.md`).
+
+### Changed
+
+- The PyPI distribution is named `repomind-analyzer` (the plain `repomind`
+  name is taken by an unrelated project); the import package and the CLI
+  command remain `repomind`.
+- Project metadata, SARIF `informationUri` and documentation links now point
+  at the real repository.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added

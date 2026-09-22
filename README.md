@@ -262,6 +262,21 @@ Everything else is clean: **100/100 (grade A)**, zero findings, zero import
 cycles. The score only became meaningful after the exclusions above; before
 them, RepoMind was grading its own test fixtures.
 
+## Benchmarks
+
+First-run results on popular open-source projects (default thresholds, no
+configuration, 500-commit window):
+
+| Project | Files | Source lines | Score | Findings | Wall time |
+| --- | ---: | ---: | --- | ---: | ---: |
+| psf/requests | 37 | 8,029 | 66/100 C | 120 | 18.6 s |
+| pallets/flask | 83 | 10,740 | 72/100 C | 129 | 19.7 s |
+| tqdm/tqdm | 65 | 5,901 | 37/100 D | 144 | 18.9 s |
+| psf/black | 351 | 118,690 | 86/100 B | 688 | 22.2 s |
+
+The full write-up — methodology, notable findings, and why excluding tests can
+*lower* the score — is in [docs/benchmarks.md](docs/benchmarks.md).
+
 ## Roadmap
 
 - [x] MVP: CLI, static analysis, dependency graph, terminal + Markdown reports
@@ -272,6 +287,7 @@ them, RepoMind was grading its own test fixtures.
 - [x] Diff mode (`--since`) for pull-request reviews
 - [x] SARIF output and a GitHub Action
 - [x] Self-contained HTML report
+- [x] Benchmarks against popular open-source projects ([docs/benchmarks.md](docs/benchmarks.md))
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation
 - [ ] Streamlit dashboard
