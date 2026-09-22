@@ -3,6 +3,7 @@
 > Local-first code intelligence for Python repositories: deep static analysis, repository health and risk hotspots — with an optional LLM layer on top.
 
 [![CI](https://github.com/PeterCode-cmd/RepoMind/actions/workflows/ci.yml/badge.svg)](https://github.com/PeterCode-cmd/RepoMind/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/repomind-analyzer.svg)](https://pypi.org/project/repomind-analyzer/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -44,23 +45,24 @@ HTML report, SARIF for GitHub code scanning, and JSON for automation
 Requires Python 3.12+.
 
 ```console
+pipx install repomind-analyzer    # provides the `repomind` command
+```
+
+The PyPI distribution is called `repomind-analyzer` because the plain
+`repomind` name is taken by an unrelated project.
+
+From source (for contributors):
+
+```console
 # with uv (recommended)
 uv venv
-uv pip install -e .
+uv pip install -e ".[dev]"
 
 # or with pip
 python -m venv .venv
 .venv\Scripts\activate        # Windows
 # source .venv/bin/activate   # Linux/macOS
-pip install -e .
-```
-
-After the first release the PyPI package will be `repomind-analyzer` (the plain
-`repomind` name is taken on PyPI by an unrelated project); it installs the same
-`repomind` command:
-
-```console
-pipx install repomind-analyzer
+pip install -e ".[dev]"
 ```
 
 Analyze a repository:
@@ -288,6 +290,7 @@ The full write-up — methodology, notable findings, and why excluding tests can
 - [x] SARIF output and a GitHub Action
 - [x] Self-contained HTML report
 - [x] Benchmarks against popular open-source projects ([docs/benchmarks.md](docs/benchmarks.md))
+- [x] Published on PyPI as [`repomind-analyzer`](https://pypi.org/project/repomind-analyzer/) (v0.1.0)
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation
 - [ ] Streamlit dashboard
