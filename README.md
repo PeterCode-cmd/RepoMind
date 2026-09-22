@@ -2,7 +2,7 @@
 
 > Local-first code intelligence for Python repositories: deep static analysis, repository health and risk hotspots — with an optional LLM layer on top.
 
-[![CI](https://github.com/repomind/repomind/actions/workflows/ci.yml/badge.svg)](https://github.com/repomind/repomind/actions/workflows/ci.yml)
+[![CI](https://github.com/PeterCode-cmd/RepoMind/actions/workflows/ci.yml/badge.svg)](https://github.com/PeterCode-cmd/RepoMind/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -53,6 +53,14 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows
 # source .venv/bin/activate   # Linux/macOS
 pip install -e .
+```
+
+After the first release the PyPI package will be `repomind-analyzer` (the plain
+`repomind` name is taken on PyPI by an unrelated project); it installs the same
+`repomind` command:
+
+```console
+pipx install repomind-analyzer
 ```
 
 Analyze a repository:
@@ -189,7 +197,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: repomind/repomind@main
+      - uses: PeterCode-cmd/RepoMind@master
         with:
           fail-on-new: "true"   # optional: fail only on new findings
           fail-under: "85"      # optional: fail below this health score

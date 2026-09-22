@@ -6,7 +6,7 @@ open-source tool, and every issue, rule idea and bug report helps.
 ## Development setup
 
 ```console
-git clone https://github.com/repomind/repomind.git
+git clone https://github.com/PeterCode-cmd/RepoMind.git
 cd repomind
 uv venv
 uv pip install -e ".[dev]"

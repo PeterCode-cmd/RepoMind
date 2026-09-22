@@ -36,9 +36,13 @@ publishing (no API tokens stored in the repository).
 
 ## One-time PyPI setup
 
-Add a trusted publisher for the `repomind` project on PyPI:
+The distribution name is `repomind-analyzer` (the plain `repomind` name is
+taken by an unrelated project); the import package and the CLI command remain
+`repomind`.
 
-- Owner / repository: `repomind/repomind`
+Add a trusted publisher for the `repomind-analyzer` project on PyPI:
+
+- Owner / repository: `PeterCode-cmd/RepoMind`
 - Workflow: `release.yml`
 - Environment: `pypi`
 

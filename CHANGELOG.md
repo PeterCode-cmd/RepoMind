@@ -35,5 +35,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI (ruff, mypy strict, pytest with coverage, self-analysis gate),
   pre-commit hooks and a release workflow with PyPI trusted publishing.
 
-[Unreleased]: https://github.com/repomind/repomind/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/repomind/repomind/releases/tag/v0.1.0
+[Unreleased]: https://github.com/PeterCode-cmd/RepoMind/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/PeterCode-cmd/RepoMind/releases/tag/v0.1.0

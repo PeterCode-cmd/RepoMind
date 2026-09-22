@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "repomind"
+name = "repomind-analyzer"
 version = "0.1.0"
 description = "Local-first code intelligence: deep static analysis, repository health and risk hotspots for Python projects."
 readme = "README.md"
@@ -62,10 +62,10 @@ dev = [
 repomind = "repomind.cli.app:main"
 
 [project.urls]
-Homepage = "https://github.com/repomind/repomind"
-Documentation = "https://github.com/repomind/repomind#readme"
-Issues = "https://github.com/repomind/repomind/issues"
-Changelog = "https://github.com/repomind/repomind/releases"
+Homepage = "https://github.com/PeterCode-cmd/RepoMind"
+Documentation = "https://github.com/PeterCode-cmd/RepoMind#readme"
+Issues = "https://github.com/PeterCode-cmd/RepoMind/issues"
+Changelog = "https://github.com/PeterCode-cmd/RepoMind/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repomind"]

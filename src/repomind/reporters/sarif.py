@@ -14,7 +14,7 @@ from repomind.models.findings import Finding
 
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
-INFORMATION_URI = "https://github.com/repomind/repomind"
+INFORMATION_URI = "https://github.com/PeterCode-cmd/RepoMind"
 
 _LEVELS: dict[Severity, str] = {
     Severity.CRITICAL: "error",
