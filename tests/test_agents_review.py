@@ -59,6 +59,13 @@ def test_model_items_are_validated(sample_project: Path) -> None:
     assert [item.path for item in notes.items] == ["samplepkg/god.py"]
     assert notes.items[0].line == 12
     assert any("unknown paths" in note for note in notes.notes)
+
+
+def test_review_prompt_carries_guidance(sample_project: Path) -> None:
+    client = FakeClient('{"summary": "ok", "items": []}')
+
+    review_findings(_result(sample_project), client=client, model="fake/model", limit=5)
+
     system, user = client.calls[0]
     assert "never invent" in system
     assert "callers" in user

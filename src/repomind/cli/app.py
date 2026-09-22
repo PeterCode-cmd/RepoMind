@@ -13,6 +13,7 @@ from repomind.cli.agents import explain, review
 from repomind.cli.analyze import analyze
 from repomind.cli.baseline import baseline
 from repomind.cli.console import console
+from repomind.cli.search import search
 from repomind.cli.trend import trend
 from repomind.core.rules import default_rules
 
@@ -27,6 +28,7 @@ app.command()(baseline)
 app.command()(trend)
 app.command()(explain)
 app.command()(review)
+app.command()(search)
 
 
 def _version_callback(value: bool) -> None:
