@@ -1,0 +1,39 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.0] - 2026-09-22
+
+### Added
+
+- CLI (`repomind analyze`, `repomind baseline`, `repomind rules`) built with
+  Typer and Rich, with progress rendering and CI-friendly exit codes.
+- Deterministic static analysis for Python: cyclomatic complexity, cognitive
+  complexity, nesting depth, function, parameter and file size metrics.
+- Module dependency graph with import-cycle detection (strongly connected
+  components), fan-in/fan-out statistics and DOT export.
+- Git history analysis: per-file churn, authors, recency and
+  complexity x churn hotspots.
+- Twelve built-in rules across complexity, maintainability, design, dead code,
+  dependencies, correctness and history.
+- Reports in five formats: terminal, Markdown, JSON, SARIF 2.1.0 and a
+  self-contained HTML report with severity filtering.
+- Baseline support (`.repomind-baseline.json`) with `--fail-on-new` for
+  incremental adoption in legacy repositories.
+- Diff mode (`--since <rev>`) for pull-request style reviews.
+- Configuration via `repomind.toml` or `[tool.repomind]`: excludes, per-rule
+  `ignore` entries, thresholds and history window.
+- Decorator-aware dead-code detection: framework entry points (CLI commands,
+  pytest fixtures, handlers) are exempt from false positives.
+- Size-normalised health score (0-100) with letter grades.
+- Composite GitHub Action with SARIF upload to GitHub code scanning.
+- CI (ruff, mypy strict, pytest with coverage, self-analysis gate),
+  pre-commit hooks and a release workflow with PyPI trusted publishing.
+
+[Unreleased]: https://github.com/repomind/repomind/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/repomind/repomind/releases/tag/v0.1.0

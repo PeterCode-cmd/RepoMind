@@ -92,7 +92,9 @@ Tip: use --format markdown --output report.md for a shareable report or --format
 
 Output above is trimmed and uncolored; borders and the score bar adapt to your
 terminal's encoding. The two suppressed entries are deliberate and explained in
-[Dogfooding](#dogfooding).
+[Dogfooding](#dogfooding). A full HTML report generated from the deliberately
+flawed sample project is checked in at
+[docs/example-report.html](docs/example-report.html).
 
 Generate shareable reports:
 

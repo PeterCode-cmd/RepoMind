@@ -76,7 +76,10 @@ include = [
     "/tests",
     "/docs",
     "/README.md",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
     "/LICENSE",
+    "/action.yml",
     "/pyproject.toml",
 ]
 

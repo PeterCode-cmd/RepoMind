@@ -31,7 +31,10 @@ ruff format --check .
 ruff check .
 mypy
 pytest --cov
+repomind analyze . --no-history --fail-under 95
 ```
+
+Releases are cut by tagging; see [docs/releasing.md](docs/releasing.md).
 
 ## Project conventions
 
