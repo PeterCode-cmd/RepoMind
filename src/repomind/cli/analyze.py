@@ -26,6 +26,7 @@ from repomind.models.enums import Severity
 from repomind.models.findings import Finding
 from repomind.reporters.json_reporter import render_json
 from repomind.reporters.markdown import render_markdown
+from repomind.reporters.sarif import render_sarif
 from repomind.reporters.terminal import render_terminal_report
 
 
@@ -35,6 +36,7 @@ class OutputFormat(StrEnum):
     TERMINAL = "terminal"
     MARKDOWN = "markdown"
     JSON = "json"
+    SARIF = "sarif"
 
 
 class SeverityOption(StrEnum):
@@ -72,14 +74,14 @@ def analyze(
     ] = None,
     output_format: Annotated[
         OutputFormat,
-        typer.Option("--format", "-f", help="Report format."),
+        typer.Option("--format", "-f", help="Report format: terminal, markdown, json or sarif."),
     ] = OutputFormat.TERMINAL,
     output: Annotated[
         Path | None,
         typer.Option(
             "--output",
             "-o",
-            help="Write markdown/JSON reports to this file instead of stdout.",
+            help="Write markdown/JSON/SARIF reports to this file instead of stdout.",
         ),
     ] = None,
     min_severity: Annotated[
@@ -284,6 +286,8 @@ def _emit_report(
 
     if output_format is OutputFormat.JSON:
         text = render_json(result, findings=findings)
+    elif output_format is OutputFormat.SARIF:
+        text = render_sarif(result, findings=findings)
     else:
         text = render_markdown(result, findings=findings, top=top)
 

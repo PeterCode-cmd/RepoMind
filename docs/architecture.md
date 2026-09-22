@@ -24,7 +24,7 @@ the CLI, and nothing in the rule layer reads files.
 | Suppression | `core/suppression.py` | Applies configured `ignore` entries after rules and before scoring. Suppressed findings stay visible as a count (and in full in JSON). |
 | Baseline | `core/baseline.py` | Splits findings into known/new against accepted fingerprints, powering `--fail-on-new` for legacy adoption. |
 | Scoring | `core/scoring.py` | Converts findings into a size-normalised 0–100 health score with a letter grade. |
-| Reporting | `reporters/` | Terminal (Rich), Markdown and JSON renderers. All three consume the same `AnalysisResult`. |
+| Reporting | `reporters/` | Terminal (Rich), Markdown, JSON and SARIF 2.1.0 renderers. All consume the same `AnalysisResult`; SARIF carries baseline fingerprints as `partialFingerprints` for code-scanning alert tracking. |
 | CLI | `cli/app.py`, `cli/analyze.py` | Typer commands (`analyze`, `rules`), progress rendering, exit codes. |
 
 ## Why these design decisions

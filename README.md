@@ -102,6 +102,7 @@ repomind analyze . --min-severity high --top 10
 repomind analyze . --exclude migrations --exclude "*_pb2.py"
 repomind analyze . --since main         # review only files changed since main
 repomind analyze . --fail-under 70     # exit code 1 when the score drops
+repomind analyze . --format sarif --output repomind.sarif
 repomind rules                          # list every built-in rule
 ```
 
@@ -121,8 +122,8 @@ Useful flags:
 
 | Flag | Description |
 | --- | --- |
-| `-f, --format` | `terminal` (default), `markdown` or `json` |
-| `-o, --output` | write markdown/JSON to a file instead of stdout |
+| `-f, --format` | `terminal` (default), `markdown`, `json` or `sarif` |
+| `-o, --output` | write markdown/JSON/SARIF to a file instead of stdout |
 | `--min-severity` | hide findings below `info`, `low`, `medium`, `high` or `critical` |
 | `--top` | number of findings shown in the report |
 | `--history/--no-history` | force Git history analysis on/off (default: auto) |
@@ -163,6 +164,36 @@ Unknown keys are rejected loudly, so typos never silently change your analysis.
 everywhere, `rule-id@glob` only for matching paths. Suppressed findings never
 disappear silently — every report shows how many were suppressed and
 `--format json` lists them in full.
+
+## GitHub Action
+
+RepoMind ships a composite action that analyzes the repository, writes a SARIF
+report and uploads it to GitHub code scanning, so findings appear as alerts on
+the pull request diff:
+
+```yaml
+name: repomind
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: repomind/repomind@main
+        with:
+          fail-on-new: "true"   # optional: fail only on new findings
+          fail-under: "85"      # optional: fail below this health score
+```
+
+Inputs: `path`, `fail-under`, `fail-on-new`, `baseline`, `sarif-file`,
+`upload-sarif`. The action runs with `--no-history` so results stay
+deterministic on shallow checkouts.
 
 ## How the health score works
 
@@ -227,7 +258,8 @@ them, RepoMind was grading its own test fixtures.
 - [x] Configurable suppression (`ignore`) and decorator-aware dead-code detection
 - [x] Baseline + `--fail-on-new` for incremental adoption in legacy repositories
 - [x] Diff mode (`--since`) for pull-request reviews
-- [ ] SARIF output and a GitHub Action
+- [x] SARIF output and a GitHub Action
+- [ ] HTML report
 - [ ] Semantic layer: local embeddings + natural-language questions about the code
 - [ ] Agent layer: Architect / Quality / Security / Maintainability / Documentation
 - [ ] Streamlit dashboard
