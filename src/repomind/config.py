@@ -56,6 +56,7 @@ class Thresholds:
 
 
 _DEFAULT_HISTORY_COMMITS = 500
+_DEFAULT_BLAME_FILES = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,10 +68,20 @@ class AnalysisConfig:
     ignore: tuple[str, ...] = ()
     use_git_history: bool = True
     history_commits: int = _DEFAULT_HISTORY_COMMITS
+    blame_files: int = _DEFAULT_BLAME_FILES
 
 
 CONFIG_FILENAMES = ("repomind.toml", "pyproject.toml")
-_SECTION_KEYS = frozenset({"thresholds", "exclude", "ignore", "use_git_history", "history_commits"})
+_SECTION_KEYS = frozenset(
+    {
+        "thresholds",
+        "exclude",
+        "ignore",
+        "use_git_history",
+        "history_commits",
+        "blame_files",
+    }
+)
 
 
 def load_config(root: Path, *, config_file: Path | None = None) -> AnalysisConfig:
@@ -144,6 +155,7 @@ def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
         ignore=_parse_ignore(table),
         use_git_history=_parse_bool(table, "use_git_history", default=True),
         history_commits=_parse_history_commits(table),
+        blame_files=_parse_blame_files(table),
     )
 
 
@@ -186,6 +198,18 @@ def _parse_history_commits(table: dict[str, Any]) -> int:
         raise ConfigurationError("'history_commits' must be an integer")
     if value < 1:
         raise ConfigurationError("'history_commits' must be a positive integer")
+    return value
+
+
+def _parse_blame_files(table: dict[str, Any]) -> int:
+    """Validate how many hot files may be blamed for function-level churn."""
+    if "blame_files" not in table:
+        return _DEFAULT_BLAME_FILES
+    value = table["blame_files"]
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ConfigurationError("'blame_files' must be an integer")
+    if value < 0:
+        raise ConfigurationError("'blame_files' must be zero or a positive integer")
     return value
 
 

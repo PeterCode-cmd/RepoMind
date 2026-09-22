@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
 from repomind.config import AnalysisConfig
 from repomind.core.graph import DependencyGraph
+from repomind.git.blame import FunctionChurn
 from repomind.git.history import HistoryReport
 from repomind.models.enums import Category, Severity
 from repomind.models.findings import Finding
@@ -28,6 +30,7 @@ class AnalysisContext:
     graph: DependencyGraph
     config: AnalysisConfig
     history: HistoryReport | None
+    function_churn: Mapping[str, FunctionChurn]
     total_loc: int
 
 

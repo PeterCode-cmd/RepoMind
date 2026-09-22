@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from repomind.config import AnalysisConfig
 from repomind.core.engine import analyze_repository
 from repomind.git.history import analyze_history
 
@@ -90,6 +91,28 @@ def test_hotspot_rule_flags_complex_churned_file(tmp_path: Path) -> None:
     (repo / "app.py").write_text(_TANGLED_SOURCE, encoding="utf-8")
     _commit(repo, "add app")
     for index in range(4):
+        (repo / "app.py").write_text(
+            _TANGLED_SOURCE.replace("result = 0", f"result = {index + 1}"),
+            encoding="utf-8",
+        )
+        _commit(repo, f"tune {index}")
+
+    result = analyze_repository(repo, use_history=True)
+    hotspots = [
+        finding for finding in result.findings if finding.rule_id == "history/complexity-hotspot"
+    ]
+
+    assert hotspots
+    assert hotspots[0].details["scope"] == "function"
+    assert hotspots[0].details["commits"] == 5
+    assert hotspots[0].path == "app.py"
+
+
+def test_function_hotspot_ignores_untouched_functions(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text(_TANGLED_SOURCE, encoding="utf-8")
+    _commit(repo, "add app")
+    for index in range(4):
         with (repo / "app.py").open("a", encoding="utf-8") as handle:
             handle.write(f"\n# touch {index}\n")
         _commit(repo, f"touch {index}")
@@ -99,9 +122,28 @@ def test_hotspot_rule_flags_complex_churned_file(tmp_path: Path) -> None:
         finding for finding in result.findings if finding.rule_id == "history/complexity-hotspot"
     ]
 
+    assert hotspots == []
+    assert result.function_churn["app.py::app.tangled"].commits == 1
+
+
+def test_hotspot_falls_back_to_file_churn_without_blame(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    (repo / "app.py").write_text(_TANGLED_SOURCE, encoding="utf-8")
+    _commit(repo, "add app")
+    for index in range(4):
+        with (repo / "app.py").open("a", encoding="utf-8") as handle:
+            handle.write(f"\n# touch {index}\n")
+        _commit(repo, f"touch {index}")
+
+    config = AnalysisConfig(blame_files=0)
+    result = analyze_repository(repo, use_history=True, config=config)
+    hotspots = [
+        finding for finding in result.findings if finding.rule_id == "history/complexity-hotspot"
+    ]
+
     assert hotspots
-    assert hotspots[0].details["commits"] == 5
-    assert hotspots[0].path == "app.py"
+    assert hotspots[0].details["scope"] == "file"
+    assert result.function_churn == {}
 
 
 def test_hotspots_require_history(tmp_path: Path) -> None:

@@ -63,6 +63,7 @@ def result_to_dict(
             "external_packages": dict(result.graph.external_imports.most_common()),
         },
         "history": _history_to_dict(result),
+        "function_churn": _function_churn_to_dict(result),
         "baseline": _baseline_to_dict(result),
         "scope": result.scope_label,
         "findings": [
@@ -97,6 +98,24 @@ def _finding_to_dict(finding: Finding, *, is_new: bool | None = None) -> dict[st
         "details": finding.details,
         "is_new": is_new,
     }
+
+
+def _function_churn_to_dict(result: AnalysisResult) -> list[dict[str, Any]]:
+    """Convert function-level churn into a JSON-serialisable list."""
+    entries: list[dict[str, Any]] = []
+    for key, churn in sorted(result.function_churn.items()):
+        path, separator, symbol = key.partition("::")
+        entries.append(
+            {
+                "path": path,
+                "symbol": symbol if separator else key,
+                "commits": churn.commits,
+                "authors": churn.authors,
+                "lines": churn.lines,
+                "last_modified": (churn.last_modified.isoformat() if churn.last_modified else None),
+            }
+        )
+    return entries
 
 
 def _baseline_to_dict(result: AnalysisResult) -> dict[str, Any] | None:

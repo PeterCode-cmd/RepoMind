@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A documentation rule (`documentation/missing-docstring`) for public modules,
   classes, functions and methods, with private names, framework hooks and test
   modules exempt.
+- Function-level churn via `git log -L` for the hottest files
+  (`blame_files`, default 10): hotspot findings now use a function's own commit
+  history, authors and recency, and fall back to file churn when unavailable.
 
 ## [0.1.0] - 2026-09-22
 

@@ -34,7 +34,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Dependencies | import cycles (strongly connected components), external package usage, hub modules |
 | Security | `eval`/`exec`, `shell=True` and `os.system`, unsafe pickle/YAML deserialization, weak hashes, `tempfile.mktemp`, hardcoded secrets (values never reported) |
 | Documentation | missing docstrings on public modules, classes, functions and methods (private names, framework hooks and tests exempt) |
-| History | churn per file, authors, recency, and **complexity × churn hotspots** |
+| History | churn per file and per function (`git log -L`), authors, recency, and **complexity × churn hotspots** (function-level when available) |
 | Correctness | files that fail to parse |
 | Configuration | path excludes, per-rule `ignore` entries, per-repo thresholds |
 
@@ -164,6 +164,7 @@ ignore = [
 ]
 use_git_history = true
 history_commits = 500
+blame_files = 10          # hottest files tracked with git log -L (0 disables)
 
 [tool.repomind.thresholds]
 cyclomatic_warn = 10

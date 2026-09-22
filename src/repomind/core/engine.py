@@ -28,6 +28,7 @@ from repomind.core.rules.base import AnalysisContext
 from repomind.core.scoring import HealthScore, compute_health_score
 from repomind.core.suppression import apply_suppressions, parse_suppressions
 from repomind.errors import RepositoryNotFoundError
+from repomind.git.blame import FunctionChurn, blame_functions
 from repomind.git.history import HistoryReport, analyze_history
 from repomind.models.enums import Severity
 from repomind.models.findings import Finding, sort_findings
@@ -81,6 +82,7 @@ class AnalysisResult:
     scope_label: str | None
     score: HealthScore
     history: HistoryReport | None
+    function_churn: dict[str, FunctionChurn]
     duration_seconds: float
     warnings: list[str]
 
@@ -97,6 +99,14 @@ class AnalysisResult:
     def findings_at_or_above(self, severity: Severity) -> list[Finding]:
         """Return findings with a severity of at least *severity*."""
         return [finding for finding in self.findings if finding.severity >= severity]
+
+
+@dataclass(frozen=True, slots=True)
+class _GitInsights:
+    """History report and function-level churn collected from Git."""
+
+    history: HistoryReport | None
+    function_churn: dict[str, FunctionChurn]
 
 
 @dataclass(frozen=True, slots=True)
@@ -147,8 +157,10 @@ def analyze_repository(
     files = _discover_files(root, config, progress, only=scope.paths if scope else None)
     modules = _parse_modules(files, root, progress)
     graph = _build_graph(modules, progress)
-    history = _collect_history(root, modules, config, enabled=history_enabled, progress=progress)
-    context = _build_context(root, modules, graph, config, history)
+    insights = _collect_git_insights(
+        root, modules, config, enabled=history_enabled, progress=progress
+    )
+    context = _build_context(root, modules, graph, config, insights)
     summary = _analyze_context(context, config, options, progress)
 
     return AnalysisResult(
@@ -162,7 +174,8 @@ def analyze_repository(
         baseline_size=summary.baseline_size,
         scope_label=scope.label if scope else None,
         score=summary.score,
-        history=history,
+        history=insights.history,
+        function_churn=insights.function_churn,
         duration_seconds=time.perf_counter() - start,
         warnings=summary.warnings,
     )
@@ -243,12 +256,56 @@ def _collect_history(
     )
 
 
+def _collect_git_insights(
+    root: Path,
+    modules: list[ParsedModule],
+    config: AnalysisConfig,
+    *,
+    enabled: bool,
+    progress: ProgressCallback | None,
+) -> _GitInsights:
+    """Run the Git history and function-blame stages."""
+    history = _collect_history(root, modules, config, enabled=enabled, progress=progress)
+    churn = _collect_function_churn(root, modules, history, config, progress)
+    return _GitInsights(history=history, function_churn=churn)
+
+
+def _collect_function_churn(
+    root: Path,
+    modules: list[ParsedModule],
+    history: HistoryReport | None,
+    config: AnalysisConfig,
+    progress: ProgressCallback | None,
+) -> dict[str, FunctionChurn]:
+    """Blame the hottest files so churn can be attributed to functions."""
+    if history is None or config.blame_files <= 0:
+        return {}
+    candidates = [
+        entry.rel_path
+        for entry in history.top_churn(limit=config.blame_files)
+        if entry.commits >= config.thresholds.hotspot_min_commits
+    ]
+    if not candidates:
+        return {}
+
+    _notify(progress, "blame", 0, 0)
+    modules_by_path = {module.rel_path: module for module in modules}
+    churn: dict[str, FunctionChurn] = {}
+    for rel_path in candidates:
+        module = modules_by_path.get(rel_path)
+        if module is None or module.syntax_error is not None:
+            continue
+        for qualname, entry in blame_functions(root, rel_path, module.all_functions).items():
+            churn[f"{rel_path}::{qualname}"] = entry
+    return churn
+
+
 def _build_context(
     root: Path,
     modules: list[ParsedModule],
     graph: DependencyGraph,
     config: AnalysisConfig,
-    history: HistoryReport | None,
+    insights: _GitInsights,
 ) -> AnalysisContext:
     """Assemble the immutable snapshot passed to every rule."""
     return AnalysisContext(
@@ -256,7 +313,8 @@ def _build_context(
         modules=tuple(modules),
         graph=graph,
         config=config,
-        history=history,
+        history=insights.history,
+        function_churn=insights.function_churn,
         total_loc=sum(module.loc for module in modules),
     )
 
