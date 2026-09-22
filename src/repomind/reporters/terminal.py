@@ -53,6 +53,7 @@ def render_terminal_report(
     _render_health(result, console)
     _render_summary(selected, console)
     _render_findings(selected, console, top=top)
+    _render_baseline(result, console)
     _render_suppressed(result, console)
     _render_graph(result, console)
     _render_history(result, console)
@@ -178,6 +179,17 @@ def _shorten_location(location: str, limit: int = 38) -> str:
     if separator != -1:
         tail = tail[separator + 1 :]
     return f"...{tail}"
+
+
+def _render_baseline(result: AnalysisResult, console: Console) -> None:
+    """Render known/new counts when a baseline is active."""
+    if result.baseline_size is None:
+        return
+    known = len(result.findings) - len(result.new_findings)
+    console.print(
+        f"[dim]Baseline: {known} known, {len(result.new_findings)} new "
+        f"({result.baseline_size} accepted entries).[/dim]"
+    )
 
 
 def _render_suppressed(result: AnalysisResult, console: Console) -> None:

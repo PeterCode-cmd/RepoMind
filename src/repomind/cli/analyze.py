@@ -12,8 +12,9 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from repomind.cli.console import console
 from repomind.config import AnalysisConfig, load_config
+from repomind.core.baseline import BASELINE_FILENAME, Baseline, load_baseline
 from repomind.core.engine import AnalysisResult, StageUpdate, analyze_repository
-from repomind.errors import RepoMindError
+from repomind.errors import ConfigurationError, RepoMindError
 from repomind.models.enums import Severity
 from repomind.models.findings import Finding
 from repomind.reporters.json_reporter import render_json
@@ -98,6 +99,26 @@ def analyze(
             help="Explicit configuration file (default: repomind.toml or pyproject.toml).",
         ),
     ] = None,
+    baseline_path: Annotated[
+        Path | None,
+        typer.Option(
+            "--baseline",
+            exists=True,
+            dir_okay=False,
+            help="Baseline file of accepted findings (default: .repomind-baseline.json).",
+        ),
+    ] = None,
+    no_baseline: Annotated[
+        bool,
+        typer.Option("--no-baseline", help="Ignore an existing baseline file."),
+    ] = False,
+    fail_on_new: Annotated[
+        bool,
+        typer.Option(
+            "--fail-on-new",
+            help="Exit with code 1 when findings are not accepted by the baseline.",
+        ),
+    ] = False,
     fail_under: Annotated[
         int | None,
         typer.Option(
@@ -111,7 +132,8 @@ def analyze(
     """Analyze a Python repository and report on code health."""
     try:
         config = _build_config(path, config_path, exclude or [])
-        result = _run_analysis(path, config, history)
+        baseline = _resolve_baseline(path, baseline_path, use_baseline=not no_baseline)
+        result = _run_analysis(path, config, history, baseline)
     except RepoMindError as error:
         console.print(f"[bold red]error:[/bold red] {error}")
         raise typer.Exit(code=2) from error
@@ -119,12 +141,47 @@ def analyze(
     findings = result.findings_at_or_above(min_severity.severity)
     _emit_report(result, findings, output_format=output_format, output=output, top=top)
 
-    if fail_under is not None and result.score.value < fail_under:
-        console.print(
-            f"[bold red]Health score {result.score.value} is below "
-            f"--fail-under {fail_under}.[/bold red]"
-        )
+    failures = _gate_failures(result, fail_under=fail_under, fail_on_new=fail_on_new)
+    if failures:
+        for failure in failures:
+            console.print(f"[bold red]{failure}[/bold red]")
         raise typer.Exit(code=1)
+
+
+def _gate_failures(
+    result: AnalysisResult,
+    *,
+    fail_under: int | None,
+    fail_on_new: bool,
+) -> list[str]:
+    """Return the reasons CI should fail for this result."""
+    failures: list[str] = []
+    if fail_under is not None and result.score.value < fail_under:
+        failures.append(f"Health score {result.score.value} is below --fail-under {fail_under}.")
+    if fail_on_new:
+        new_count = (
+            len(result.new_findings) if result.baseline_size is not None else len(result.findings)
+        )
+        if new_count:
+            failures.append(f"{new_count} finding(s) are not accepted by the baseline.")
+    return failures
+
+
+def _resolve_baseline(
+    path: Path,
+    baseline_path: Path | None,
+    *,
+    use_baseline: bool,
+) -> Baseline | None:
+    """Load the requested baseline file, or auto-detect one in the repository."""
+    if not use_baseline:
+        return None
+    candidate = baseline_path or (path / BASELINE_FILENAME)
+    if not candidate.is_file():
+        if baseline_path is not None:
+            raise ConfigurationError(f"baseline file not found: {candidate}")
+        return None
+    return load_baseline(candidate)
 
 
 def _build_config(
@@ -143,6 +200,7 @@ def _run_analysis(
     path: Path,
     config: AnalysisConfig,
     history: bool | None,
+    baseline: Baseline | None,
 ) -> AnalysisResult:
     """Run the engine while rendering a live progress spinner."""
     with Progress(
@@ -166,6 +224,7 @@ def _run_analysis(
             path,
             config=config,
             use_history=history,
+            baseline=baseline,
             progress=on_stage,
         )
 

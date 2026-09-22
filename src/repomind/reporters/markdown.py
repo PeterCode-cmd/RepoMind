@@ -34,6 +34,7 @@ def render_markdown(
 
     lines.extend(_header(result))
     lines.extend(_summary(result, selected))
+    lines.extend(_new_findings_section(result))
     lines.extend(_findings_sections(selected, top=top))
     lines.extend(_suppressed_section(result))
     lines.extend(_dependency_section(result))
@@ -72,6 +73,17 @@ def _summary(result: AnalysisResult, findings: Sequence[Finding]) -> list[str]:
             [
                 ["Health score", f"{score.value}/100 (grade {score.grade})"],
                 ["Findings", f"{len(findings)} ({breakdown})"],
+                *(
+                    [
+                        [
+                            "Baseline",
+                            f"{len(result.findings) - len(result.new_findings)} known, "
+                            f"{len(result.new_findings)} new",
+                        ]
+                    ]
+                    if result.baseline_size is not None
+                    else []
+                ),
                 ["Suppressed", str(len(result.suppressed))],
                 ["Python files", str(result.file_count)],
                 ["Source lines", f"{result.total_loc:,}"],
@@ -120,6 +132,27 @@ def _findings_sections(findings: Sequence[Finding], *, top: int) -> list[str]:
             lines.append(f"_{len(category_findings) - top} more findings omitted._")
         lines.append("")
     return lines
+
+
+def _new_findings_section(result: AnalysisResult) -> list[str]:
+    """Render the findings that are not accepted by the baseline yet."""
+    if result.baseline_size is None or not result.new_findings:
+        return []
+    rows = [
+        [
+            finding.severity.label.upper(),
+            f"`{finding.rule_id}`",
+            f"`{finding.location}`",
+            finding.message,
+        ]
+        for finding in result.new_findings
+    ]
+    return [
+        f"## New findings ({len(result.new_findings)})",
+        "",
+        *_table(["Severity", "Rule", "Location", "Message"], rows),
+        "",
+    ]
 
 
 def _suppressed_section(result: AnalysisResult) -> list[str]:

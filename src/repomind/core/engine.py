@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from repomind.config import AnalysisConfig, load_config
+from repomind.core.baseline import Baseline
 from repomind.core.discovery import find_python_files
 from repomind.core.graph import DependencyGraph
 from repomind.core.pyparser import parse_module
@@ -59,6 +60,8 @@ class AnalysisResult:
     graph: DependencyGraph
     findings: list[Finding]
     suppressed: list[Finding]
+    new_findings: list[Finding]
+    baseline_size: int | None
     score: HealthScore
     history: HistoryReport | None
     duration_seconds: float
@@ -84,6 +87,7 @@ def analyze_repository(
     *,
     config: AnalysisConfig | None = None,
     use_history: bool | None = None,
+    baseline: Baseline | None = None,
     progress: ProgressCallback | None = None,
 ) -> AnalysisResult:
     """Run the full analysis pipeline over *root*.
@@ -94,6 +98,8 @@ def analyze_repository(
             omitted.
         use_history: Force Git history analysis on or off. ``None`` (default)
             follows ``config.use_git_history``.
+        baseline: Accepted findings from an earlier run. When provided,
+            :attr:`AnalysisResult.new_findings` lists everything not accepted.
         progress: Optional callback receiving :class:`StageUpdate` events.
 
     Returns:
@@ -119,6 +125,7 @@ def analyze_repository(
     _notify(progress, "rules", 0, 0)
     findings, warnings = _run_rules(context)
     findings, suppressed = _apply_suppressions(config, findings, warnings)
+    new_findings, baseline_size = _compare_with_baseline(findings, baseline)
     score = compute_health_score(findings, context.total_loc)
 
     return AnalysisResult(
@@ -128,6 +135,8 @@ def analyze_repository(
         graph=graph,
         findings=findings,
         suppressed=suppressed,
+        new_findings=new_findings,
+        baseline_size=baseline_size,
         score=score,
         history=history,
         duration_seconds=time.perf_counter() - start,
@@ -230,6 +239,17 @@ def _apply_suppressions(
     )
 
     return apply_suppressions(findings, suppressions)
+
+
+def _compare_with_baseline(
+    findings: list[Finding],
+    baseline: Baseline | None,
+) -> tuple[list[Finding], int | None]:
+    """Return ``(new findings, baseline size)`` for an optional baseline."""
+    if baseline is None:
+        return [], None
+    new_findings, _known = baseline.split(findings)
+    return new_findings, baseline.size
 
 
 def _notify(callback: ProgressCallback | None, stage: str, current: int, total: int) -> None:

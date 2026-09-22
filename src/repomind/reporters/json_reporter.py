@@ -8,6 +8,7 @@ from dataclasses import asdict
 from typing import Any
 
 from repomind import __version__
+from repomind.core.baseline import fingerprint
 from repomind.core.engine import AnalysisResult
 from repomind.models.enums import Severity
 from repomind.models.findings import Finding
@@ -34,6 +35,11 @@ def result_to_dict(
 ) -> dict[str, Any]:
     """Convert an analysis result into a JSON-serialisable dictionary."""
     selected = list(result.findings if findings is None else findings)
+    new_fingerprints = (
+        frozenset(fingerprint(finding) for finding in result.new_findings)
+        if result.baseline_size is not None
+        else None
+    )
     return {
         "tool": {"name": "repomind", "version": __version__},
         "repository": {
@@ -57,7 +63,16 @@ def result_to_dict(
             "external_packages": dict(result.graph.external_imports.most_common()),
         },
         "history": _history_to_dict(result),
-        "findings": [_finding_to_dict(finding) for finding in selected],
+        "baseline": _baseline_to_dict(result),
+        "findings": [
+            _finding_to_dict(
+                finding,
+                is_new=(
+                    None if new_fingerprints is None else fingerprint(finding) in new_fingerprints
+                ),
+            )
+            for finding in selected
+        ],
         "suppressed": [_finding_to_dict(finding) for finding in result.suppressed],
         "warnings": list(result.warnings),
         "duration_seconds": round(result.duration_seconds, 4),
@@ -65,7 +80,7 @@ def result_to_dict(
     }
 
 
-def _finding_to_dict(finding: Finding) -> dict[str, Any]:
+def _finding_to_dict(finding: Finding, *, is_new: bool | None = None) -> dict[str, Any]:
     """Convert one finding into a JSON-serialisable dictionary."""
     return {
         "rule_id": finding.rule_id,
@@ -79,6 +94,18 @@ def _finding_to_dict(finding: Finding) -> dict[str, Any]:
         "symbol": finding.symbol,
         "suggestion": finding.suggestion,
         "details": finding.details,
+        "is_new": is_new,
+    }
+
+
+def _baseline_to_dict(result: AnalysisResult) -> dict[str, Any] | None:
+    """Convert baseline statistics into a JSON-serialisable dictionary."""
+    if result.baseline_size is None:
+        return None
+    return {
+        "known": len(result.findings) - len(result.new_findings),
+        "new": len(result.new_findings),
+        "accepted": result.baseline_size,
     }
 
 

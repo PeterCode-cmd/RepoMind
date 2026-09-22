@@ -104,6 +104,18 @@ repomind analyze . --fail-under 70     # exit code 1 when the score drops
 repomind rules                          # list every built-in rule
 ```
 
+Adopting RepoMind in a legacy repository: accept today's findings once, then
+let CI fail only on new problems.
+
+```console
+repomind baseline .                    # writes .repomind-baseline.json
+repomind analyze . --fail-on-new       # exit code 1 only for new findings
+```
+
+The baseline file is plain JSON with one reviewable entry per accepted finding
+(rule, path, symbol, severity). Fingerprints ignore line numbers and measured
+values, so a known issue stays known when it moves or grows.
+
 Useful flags:
 
 | Flag | Description |
@@ -115,6 +127,8 @@ Useful flags:
 | `--history/--no-history` | force Git history analysis on/off (default: auto) |
 | `-x, --exclude` | glob pattern to skip; repeatable, matches any path segment |
 | `--config` | explicit configuration file |
+| `--baseline` / `--no-baseline` | use or ignore a baseline file (auto-detected by default) |
+| `--fail-on-new` | CI gate: exit code 1 for findings not accepted by the baseline |
 | `--fail-under` | CI gate: exit code 1 below the given health score |
 
 ## Configuration
@@ -209,7 +223,7 @@ them, RepoMind was grading its own test fixtures.
 - [x] Git history analysis with complexity × churn hotspots
 - [x] JSON output and `--fail-under` CI gate
 - [x] Configurable suppression (`ignore`) and decorator-aware dead-code detection
-- [ ] Baseline + `--fail-on-new` for incremental adoption in legacy repositories
+- [x] Baseline + `--fail-on-new` for incremental adoption in legacy repositories
 - [ ] Diff mode (`--since`, `--diff`) for pull-request reviews
 - [ ] SARIF output and a GitHub Action
 - [ ] Semantic layer: local embeddings + natural-language questions about the code

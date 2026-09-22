@@ -10,6 +10,7 @@ from rich.table import Table
 
 from repomind import __version__
 from repomind.cli.analyze import analyze
+from repomind.cli.baseline import baseline
 from repomind.cli.console import console
 from repomind.core.rules import default_rules
 
@@ -20,6 +21,7 @@ app = typer.Typer(
     add_completion=False,
 )
 app.command()(analyze)
+app.command()(baseline)
 
 
 def _version_callback(value: bool) -> None:
