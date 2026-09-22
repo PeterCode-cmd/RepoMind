@@ -51,6 +51,8 @@ class LiteLLMClient:
 
         Transient provider failures (rate limits, 5xx) are retried by litellm
         with backoff, which keeps cloud hiccups from degrading a review.
+        litellm's feedback banner is disabled so failed attempts that later
+        succeed do not leak noise into the output.
 
         Raises:
             MissingLLMError: If the optional ``llm`` extra is not installed.
@@ -61,6 +63,7 @@ class LiteLLMClient:
         except ImportError as exc:
             raise MissingLLMError(INSTALL_HINT) from exc
 
+        litellm.suppress_debug_info = True
         response = litellm.completion(
             model=self._model,
             messages=[
