@@ -13,6 +13,7 @@ from typing import Protocol
 from repomind.errors import RepoMindError
 
 INSTALL_HINT = 'the llm extra is not installed: pip install "repomind-analyzer[llm]"'
+_DEFAULT_RETRIES = 2
 
 
 class MissingLLMError(RepoMindError):
@@ -48,6 +49,9 @@ class LiteLLMClient:
     def complete(self, *, system: str, user: str) -> str:
         """Return the raw model response, importing litellm lazily.
 
+        Transient provider failures (rate limits, 5xx) are retried by litellm
+        with backoff, which keeps cloud hiccups from degrading a review.
+
         Raises:
             MissingLLMError: If the optional ``llm`` extra is not installed.
             RepoMindError: If the model returns an empty response.
@@ -64,6 +68,7 @@ class LiteLLMClient:
                 {"role": "user", "content": user},
             ],
             timeout=self.timeout,
+            num_retries=_DEFAULT_RETRIES,
         )
         content = response.choices[0].message.content
         if not isinstance(content, str) or not content.strip():
