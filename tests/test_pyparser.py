@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 from repomind.core.pyparser import parse_module
@@ -60,6 +61,18 @@ def test_syntax_errors_are_captured(sample_project: Path) -> None:
     assert module.syntax_error is not None
     assert module.functions == []
     assert module.classes == []
+
+
+def test_syntax_warnings_from_sources_are_suppressed(tmp_path: Path) -> None:
+    path = tmp_path / "mod.py"
+    path.write_text('"""Module."""\n\n\nPATTERN = "\\ "\n', encoding="utf-8")
+
+    with warnings.catch_warnings(record=True) as recorded:
+        warnings.simplefilter("always")
+        module = parse_module(path, tmp_path)
+
+    assert module.syntax_error is None
+    assert not [entry for entry in recorded if issubclass(entry.category, SyntaxWarning)]
 
 
 def test_src_layout_strips_source_root(tmp_path: Path) -> None:

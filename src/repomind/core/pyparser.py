@@ -10,6 +10,9 @@ from __future__ import annotations
 import ast
 import io
 import tokenize
+import warnings
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from repomind.core.astutils import call_name
@@ -34,13 +37,34 @@ _SKIPPED_TOKEN_TYPES = frozenset(
 )
 
 
+@contextmanager
+def _quiet_syntax_warnings() -> Iterator[None]:
+    """Silence SyntaxWarnings emitted while reading analyzed sources.
+
+    Both ``ast.parse`` and the C tokenizer warn about invalid escape
+    sequences in the analyzed code; those warnings belong to the analyzed
+    project, not to the person running RepoMind.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", SyntaxWarning)
+        yield
+
+
 def parse_module(path: Path, root: Path) -> ParsedModule:
     """Parse a single file into a :class:`ParsedModule`.
 
-    Files that cannot be decoded or parsed are returned with ``syntax_error``
-    set and empty metrics instead of raising, so that one broken file never
-    aborts an analysis run.
+    SyntaxWarnings raised by the analyzed source (invalid escape sequences in
+    strings, for example) are silenced: they belong to the analyzed project,
+    not to the person running RepoMind. Files that cannot be decoded or parsed
+    are returned with ``syntax_error`` set and empty metrics instead of
+    raising, so that one broken file never aborts an analysis run.
     """
+    with _quiet_syntax_warnings():
+        return _parse_module(path, root)
+
+
+def _parse_module(path: Path, root: Path) -> ParsedModule:
+    """Parse the file; see :func:`parse_module` for the contract."""
     rel_path = path.relative_to(root).as_posix()
     module_name = _module_name(rel_path, fallback=root.name)
 
