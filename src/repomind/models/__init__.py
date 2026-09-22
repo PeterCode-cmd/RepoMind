@@ -9,7 +9,13 @@ from __future__ import annotations
 
 from repomind.models.enums import Category, Severity
 from repomind.models.findings import Finding
-from repomind.models.metrics import ClassMetrics, FunctionMetrics, ImportInfo, ParsedModule
+from repomind.models.metrics import (
+    ClassMetrics,
+    FunctionMetrics,
+    ImportInfo,
+    ParsedModule,
+    SecuritySignal,
+)
 
 __all__ = [
     "Category",
@@ -18,5 +24,6 @@ __all__ = [
     "FunctionMetrics",
     "ImportInfo",
     "ParsedModule",
+    "SecuritySignal",
     "Severity",
 ]

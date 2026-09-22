@@ -16,6 +16,7 @@ the CLI, and nothing in the rule layer reads files.
 | --- | --- | --- |
 | Discovery | `core/discovery.py` | Find `.py` files. Inside a Git repository it delegates to `git ls-files`, so `.gitignore` is respected for free; otherwise it walks the tree while skipping caches, virtualenvs and hidden directories. In diff mode the discovered set is intersected with the changed paths. |
 | Parsing | `core/pyparser.py` | The only module that touches `ast`. Produces `ParsedModule` objects: functions, classes, imports, references, LOC, `__all__`, and syntax errors (captured, never raised). |
+| Signals | `core/signals.py` | Import-alias-aware extraction of security-relevant AST patterns (dynamic execution, shell usage, unsafe deserialization, weak hashes, insecure temp files, hardcoded secrets) so security rules stay AST-free. Secret values are never recorded. |
 | Complexity | `core/complexity.py` | Cyclomatic complexity (McCabe-style), Sonar-inspired cognitive complexity and maximum nesting depth. Nested functions are measured separately. |
 | Graph | `core/graph.py` | Directed module graph from import statements. Relative imports are resolved against the package of the importing module. Cycles are strongly connected components. |
 | History | `git/history.py` | Walks up to N commits, accumulating per-file commits, churn, authors and recency. Returns `None` outside Git repositories. |

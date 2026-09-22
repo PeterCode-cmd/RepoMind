@@ -26,6 +26,14 @@ from repomind.core.rules.maintainability_rules import (
     LongFunctionRule,
     TooManyParametersRule,
 )
+from repomind.core.rules.security_rules import (
+    DynamicExecutionRule,
+    HardcodedSecretRule,
+    InsecureTempFileRule,
+    ShellExecutionRule,
+    UnsafeDeserializationRule,
+    WeakHashRule,
+)
 
 
 def default_rules() -> tuple[Rule, ...]:
@@ -42,6 +50,12 @@ def default_rules() -> tuple[Rule, ...]:
         UnusedImportRule(),
         UnusedPrivateFunctionRule(),
         CyclicDependencyRule(),
+        DynamicExecutionRule(),
+        ShellExecutionRule(),
+        UnsafeDeserializationRule(),
+        WeakHashRule(),
+        InsecureTempFileRule(),
+        HardcodedSecretRule(),
         ComplexityHotspotRule(),
     )
 

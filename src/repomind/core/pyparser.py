@@ -17,6 +17,7 @@ from repomind.core.complexity import (
     cyclomatic_complexity,
     max_nesting_depth,
 )
+from repomind.core.signals import collect_security_signals
 from repomind.models.metrics import ClassMetrics, FunctionMetrics, ImportInfo, ParsedModule
 
 _SKIPPED_TOKEN_TYPES = frozenset(
@@ -81,6 +82,7 @@ def parse_module(path: Path, root: Path) -> ParsedModule:
         classes=classes,
         imports=imports,
         unused_imports=_find_unused_imports(imports, references, exports),
+        security_signals=collect_security_signals(tree),
         all_exports=exports,
         references=references,
     )

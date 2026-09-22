@@ -32,5 +32,6 @@ class Category(StrEnum):
     DESIGN = "design"
     DEAD_CODE = "dead-code"
     DEPENDENCIES = "dependencies"
+    SECURITY = "security"
     CORRECTNESS = "correctness"
     HISTORY = "history"

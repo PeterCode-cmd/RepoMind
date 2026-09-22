@@ -99,6 +99,18 @@ class AnalysisResult:
         return [finding for finding in self.findings if finding.severity >= severity]
 
 
+@dataclass(frozen=True, slots=True)
+class _FindingsSummary:
+    """Outcome of the rule, suppression, baseline and scoring stages."""
+
+    findings: list[Finding]
+    suppressed: list[Finding]
+    new_findings: list[Finding]
+    baseline_size: int | None
+    score: HealthScore
+    warnings: list[str]
+
+
 def analyze_repository(
     root: Path,
     *,
@@ -111,10 +123,8 @@ def analyze_repository(
 
     Args:
         root: Repository root to analyze.
-        config: Explicit configuration; discovered from the repository when
-            omitted.
-        use_history: Force Git history analysis on or off; ``None`` follows
-            the configuration.
+        config: Explicit configuration; discovered from the repository when omitted.
+        use_history: Force Git history on/off; ``None`` follows the configuration.
         options: Accepted findings (baseline) and an optional path scope.
         progress: Optional callback receiving :class:`StageUpdate` events.
 
@@ -139,26 +149,43 @@ def analyze_repository(
     graph = _build_graph(modules, progress)
     history = _collect_history(root, modules, config, enabled=history_enabled, progress=progress)
     context = _build_context(root, modules, graph, config, history)
-
-    _notify(progress, "rules", 0, 0)
-    findings, warnings = _run_rules(context)
-    findings, suppressed = _apply_suppressions(config, findings, warnings)
-    new_findings, baseline_size = _compare_with_baseline(findings, options.baseline)
-    score = compute_health_score(findings, context.total_loc)
+    summary = _analyze_context(context, config, options, progress)
 
     return AnalysisResult(
         root=root,
         config=config,
         modules=modules,
         graph=graph,
+        findings=summary.findings,
+        suppressed=summary.suppressed,
+        new_findings=summary.new_findings,
+        baseline_size=summary.baseline_size,
+        scope_label=scope.label if scope else None,
+        score=summary.score,
+        history=history,
+        duration_seconds=time.perf_counter() - start,
+        warnings=summary.warnings,
+    )
+
+
+def _analyze_context(
+    context: AnalysisContext,
+    config: AnalysisConfig,
+    options: AnalysisOptions,
+    progress: ProgressCallback | None,
+) -> _FindingsSummary:
+    """Run rules, apply suppression and baseline, then score the repository."""
+    _notify(progress, "rules", 0, 0)
+    findings, warnings = _run_rules(context)
+    findings, suppressed = _apply_suppressions(config, findings, warnings)
+    new_findings, baseline_size = _compare_with_baseline(findings, options.baseline)
+    score = compute_health_score(findings, context.total_loc)
+    return _FindingsSummary(
         findings=findings,
         suppressed=suppressed,
         new_findings=new_findings,
         baseline_size=baseline_size,
-        scope_label=scope.label if scope else None,
         score=score,
-        history=history,
-        duration_seconds=time.perf_counter() - start,
         warnings=warnings,
     )
 

@@ -37,7 +37,7 @@ def test_external_imports_are_tracked(sample_project: Path) -> None:
 
 def test_counts_and_dot_export(sample_project: Path) -> None:
     graph = _build(sample_project)
-    assert graph.module_count == 7
+    assert graph.module_count == 8
     assert graph.edge_count >= 3
     dot = graph.to_dot()
     assert "digraph repomind" in dot

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Six security rules (`security/*`) backed by AST signal extraction: dynamic
+  execution, shell execution, unsafe deserialization, weak hashes, insecure
+  temporary files and hardcoded secrets. Import aliases are resolved and secret
+  values are never copied into findings.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added

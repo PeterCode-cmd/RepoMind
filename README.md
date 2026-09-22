@@ -32,6 +32,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Design | god objects (method count, class size, weighted methods per class) |
 | Dead code | unused imports, unreferenced private functions and methods |
 | Dependencies | import cycles (strongly connected components), external package usage, hub modules |
+| Security | `eval`/`exec`, `shell=True` and `os.system`, unsafe pickle/YAML deserialization, weak hashes, `tempfile.mktemp`, hardcoded secrets (values never reported) |
 | History | churn per file, authors, recency, and **complexity × churn hotspots** |
 | Correctness | files that fail to parse |
 | Configuration | path excludes, per-rule `ignore` entries, per-repo thresholds |

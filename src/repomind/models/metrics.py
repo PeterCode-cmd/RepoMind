@@ -100,6 +100,20 @@ class ImportInfo:
         return f"import {self.module}"
 
 
+@dataclass(frozen=True, slots=True)
+class SecuritySignal:
+    """A security-relevant pattern found while parsing a module.
+
+    Signals are extracted by the parser so that security rules never need to
+    touch the AST themselves. ``detail`` is safe to display: it never contains
+    the value of a detected secret.
+    """
+
+    kind: str
+    lineno: int
+    detail: str
+
+
 @dataclass(slots=True)
 class ParsedModule:
     """Everything RepoMind knows about a single Python source file."""
@@ -113,6 +127,7 @@ class ParsedModule:
     classes: list[ClassMetrics] = field(default_factory=list)
     imports: list[ImportInfo] = field(default_factory=list)
     unused_imports: list[ImportInfo] = field(default_factory=list)
+    security_signals: list[SecuritySignal] = field(default_factory=list)
     all_exports: frozenset[str] = frozenset()
     references: frozenset[str] = frozenset()
     syntax_error: str | None = None

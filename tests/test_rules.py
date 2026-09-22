@@ -26,6 +26,12 @@ def test_engine_reports_expected_rules(sample_project: Path) -> None:
         "dead-code/unused-private-function",
         "dependencies/cyclic-import",
         "correctness/syntax-error",
+        "security/dynamic-execution",
+        "security/shell-execution",
+        "security/unsafe-deserialization",
+        "security/weak-hash",
+        "security/insecure-temp-file",
+        "security/hardcoded-secret",
     } <= rule_ids
 
 
