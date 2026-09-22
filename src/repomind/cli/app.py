@@ -13,6 +13,7 @@ from repomind.cli.agents import explain, review
 from repomind.cli.analyze import analyze
 from repomind.cli.baseline import baseline
 from repomind.cli.console import console
+from repomind.cli.doctor import doctor
 from repomind.cli.index import index
 from repomind.cli.search import search
 from repomind.cli.trend import trend
@@ -21,6 +22,12 @@ from repomind.core.rules import default_rules
 app = typer.Typer(
     name="repomind",
     help="Local-first code intelligence for Python repositories.",
+    epilog=(
+        "Common flows:  analyze: repomind analyze .   |   "
+        "semantic search: repomind index . then repomind search --mode semantic   |   "
+        "agents: repomind explain rule-id@path:line   |   "
+        "environment: repomind doctor"
+    ),
     no_args_is_help=True,
     add_completion=False,
 )
@@ -31,6 +38,7 @@ app.command()(explain)
 app.command()(review)
 app.command()(search)
 app.command()(index)
+app.command()(doctor)
 
 
 def _version_callback(value: bool) -> None:

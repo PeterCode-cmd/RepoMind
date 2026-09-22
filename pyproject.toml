@@ -141,9 +141,11 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "src/repomind/agents/client.py" = ["PLC0415"]
+"src/repomind/api.py" = ["PLC0415"]
 "src/repomind/cli/index.py" = ["PLC0415"]
 "src/repomind/cli/search.py" = ["PLC0415"]
 "src/repomind/core/complexity.py" = ["PLR0911"]
+"src/repomind/core/doctor.py" = ["S310"]
 "src/repomind/semantic/embedder.py" = ["PLC0415"]
 "tests/**" = ["ANN", "ARG001", "ARG002", "ARG005", "D", "PLR2004", "S101", "S603", "S607"]
 

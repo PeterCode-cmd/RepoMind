@@ -77,7 +77,11 @@ def explain(
         typer.Option("--history/--no-history", help="Git history analysis (default: auto)."),
     ] = None,
 ) -> None:
-    """Explain one finding, using the configured LLM when available."""
+    """Explain one finding, using the configured LLM when available.
+
+    Defaults to a local Ollama model; --model switches to any cloud provider
+    (API key from the environment) and --no-llm prints deterministic facts.
+    """
     try:
         config = build_config(path, config_path, [])
         result = run_engine(path, config, use_history=history)
@@ -133,7 +137,11 @@ def review(
         typer.Option("--history/--no-history", help="Git history analysis (default: auto)."),
     ] = None,
 ) -> None:
-    """Prioritise the findings that need attention, optionally only changed files."""
+    """Prioritise the findings that need attention, optionally only changed files.
+
+    Uses the configured LLM (Ollama by default) and falls back to the
+    deterministic summary with --no-llm or when no model is available.
+    """
     try:
         config = build_config(path, config_path, [])
         baseline = resolve_baseline(path, None, use_baseline=True)

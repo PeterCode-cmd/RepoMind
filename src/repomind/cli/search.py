@@ -47,7 +47,10 @@ def search(
     ] = Path(),
     mode: Annotated[
         SearchMode,
-        typer.Option("--mode", help="lexical (BM25, always available) or semantic (embeddings)."),
+        typer.Option(
+            "--mode",
+            help="lexical (BM25, no extra) or semantic (embeddings, needs 'repomind index').",
+        ),
     ] = SearchMode.LEXICAL,
     top: Annotated[
         int,
@@ -74,7 +77,11 @@ def search(
         typer.Option("--config", exists=True, dir_okay=False, help="Explicit configuration file."),
     ] = None,
 ) -> None:
-    """Search the codebase lexically (BM25) or semantically (embeddings)."""
+    """Search the codebase lexically (BM25) or semantically (embeddings).
+
+    Lexical mode needs no extra installs; semantic mode requires the semantic
+    extra and an index built with 'repomind index'.
+    """
     try:
         config = build_config(path, config_path, exclude or [])
         hits = (

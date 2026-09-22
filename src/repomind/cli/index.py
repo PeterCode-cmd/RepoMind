@@ -41,7 +41,11 @@ def index(
         typer.Option("--config", exists=True, dir_okay=False, help="Explicit configuration file."),
     ] = None,
 ) -> None:
-    """Build or refresh the local semantic index used by search and ask."""
+    """Build or refresh the local semantic index used by semantic search.
+
+    Requires the semantic extra (pip install "repomind-analyzer[semantic]");
+    the first run downloads the embedding model.
+    """
     try:
         config = build_config(path, config_path, exclude or [])
         result = run_engine(path, config, use_history=False)
