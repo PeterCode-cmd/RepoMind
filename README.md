@@ -35,7 +35,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Call graph | function-level call edges; caller counts attached to findings and fan-in leaders in reports |
 | Cohesion & coupling | LCOM4 per class (stub and dunder methods excluded) and afferent/efferent coupling with instability per module |
 | Trend | health score across sampled commits (`repomind trend`), in terminal, Markdown or JSON |
-| Search | dependency-free lexical search over AST-aware chunks (`repomind search`), snake_case/camelCase aware, JSON output |
+| Search | lexical (BM25) and semantic search over AST-aware chunks; local fastembed embeddings or any embedding API through litellm |
 | Security | `eval`/`exec`, `shell=True` and `os.system`, unsafe pickle/YAML deserialization, weak hashes, `tempfile.mktemp`, hardcoded secrets (values never reported) |
 | Documentation | missing docstrings on public modules, classes, functions and methods (private names, framework hooks and tests exempt) |
 | History | churn per file and per function (`git log -L`), authors, recency, and **complexity × churn hotspots** (function-level when available) |
@@ -131,6 +131,8 @@ repomind analyze . --format sarif --output repomind.sarif
 repomind analyze . --format html --output report.html
 repomind trend .                        # health score across sampled commits
 repomind search "retry backoff"          # lexical search over code chunks
+repomind index .                         # build the local semantic index
+repomind search "where is retry handled" --mode semantic
 repomind rules                          # list every built-in rule
 ```
 

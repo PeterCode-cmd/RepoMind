@@ -62,6 +62,28 @@ _DEFAULT_BLAME_FILES = 10
 DEFAULT_LLM_MODEL = "ollama/qwen2.5-coder:7b"
 DEFAULT_LLM_TIMEOUT = 60
 DEFAULT_LLM_MAX_FINDINGS = 20
+DEFAULT_SEMANTIC_PROVIDER = "fastembed"
+DEFAULT_SEMANTIC_MODEL = "BAAI/bge-small-en-v1.5"
+DEFAULT_SEMANTIC_INDEX_DIR = ".repomind"
+DEFAULT_SEMANTIC_TOP_K = 8
+DEFAULT_SEMANTIC_MIN_SCORE = 0.25
+_SEMANTIC_PROVIDERS = frozenset({"fastembed", "api"})
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticConfig:
+    """Settings for the optional semantic layer.
+
+    ``provider`` selects where embeddings come from: ``fastembed`` runs a
+    small ONNX model locally, ``api`` calls an embedding model through litellm
+    with the user's own API key from the environment.
+    """
+
+    provider: str = DEFAULT_SEMANTIC_PROVIDER
+    model: str = DEFAULT_SEMANTIC_MODEL
+    index_dir: str = DEFAULT_SEMANTIC_INDEX_DIR
+    top_k: int = DEFAULT_SEMANTIC_TOP_K
+    min_score: float = DEFAULT_SEMANTIC_MIN_SCORE
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +111,7 @@ class AnalysisConfig:
     history_commits: int = _DEFAULT_HISTORY_COMMITS
     blame_files: int = _DEFAULT_BLAME_FILES
     llm: LlmConfig = field(default_factory=LlmConfig)
+    semantic: SemanticConfig = field(default_factory=SemanticConfig)
 
 
 CONFIG_FILENAMES = ("repomind.toml", "pyproject.toml")
@@ -101,6 +124,7 @@ _SECTION_KEYS = frozenset(
         "history_commits",
         "blame_files",
         "llm",
+        "semantic",
     }
 )
 
@@ -178,7 +202,70 @@ def _parse_config(table: dict[str, Any]) -> AnalysisConfig:
         history_commits=_parse_history_commits(table),
         blame_files=_parse_blame_files(table),
         llm=_parse_llm(table),
+        semantic=_parse_semantic(table),
     )
+
+
+def _parse_semantic(table: dict[str, Any]) -> SemanticConfig:
+    """Validate the optional ``[semantic]`` table."""
+    if "semantic" not in table:
+        return SemanticConfig()
+    raw = table["semantic"]
+    if not isinstance(raw, dict):
+        raise ConfigurationError("'semantic' must be a table")
+    _reject_unknown_semantic_keys(raw)
+    return SemanticConfig(
+        provider=_parse_semantic_provider(raw),
+        model=_parse_semantic_model(raw),
+        index_dir=_parse_semantic_index_dir(raw),
+        top_k=_parse_positive_int(raw, "top_k", DEFAULT_SEMANTIC_TOP_K, prefix="semantic"),
+        min_score=_parse_semantic_min_score(raw),
+    )
+
+
+def _parse_semantic_provider(raw: dict[str, Any]) -> str:
+    """Validate the ``[semantic]`` embedding provider."""
+    provider = raw.get("provider", DEFAULT_SEMANTIC_PROVIDER)
+    if provider not in _SEMANTIC_PROVIDERS:
+        valid = ", ".join(sorted(_SEMANTIC_PROVIDERS))
+        raise ConfigurationError(f"'semantic.provider' must be one of: {valid}")
+    return str(provider)
+
+
+def _parse_semantic_model(raw: dict[str, Any]) -> str:
+    """Validate the ``[semantic]`` model identifier."""
+    model = raw.get("model", DEFAULT_SEMANTIC_MODEL)
+    if not isinstance(model, str) or not model.strip():
+        raise ConfigurationError("'semantic.model' must be a non-empty string")
+    return model
+
+
+def _parse_semantic_index_dir(raw: dict[str, Any]) -> str:
+    """Validate the ``[semantic]`` index directory."""
+    index_dir = raw.get("index_dir", DEFAULT_SEMANTIC_INDEX_DIR)
+    if not isinstance(index_dir, str) or not index_dir.strip():
+        raise ConfigurationError("'semantic.index_dir' must be a non-empty string")
+    return index_dir
+
+
+def _parse_semantic_min_score(raw: dict[str, Any]) -> float:
+    """Validate the ``[semantic]`` similarity threshold."""
+    value = raw.get("min_score", DEFAULT_SEMANTIC_MIN_SCORE)
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise ConfigurationError("'semantic.min_score' must be a number")
+    if not 0.0 <= float(value) <= 1.0:
+        raise ConfigurationError("'semantic.min_score' must be between 0 and 1")
+    return float(value)
+
+
+def _reject_unknown_semantic_keys(raw: dict[str, Any]) -> None:
+    """Reject unknown ``[semantic]`` keys."""
+    valid = {"provider", "model", "index_dir", "top_k", "min_score"}
+    unknown = sorted(set(raw) - valid)
+    if unknown:
+        raise ConfigurationError(
+            f"unknown semantic keys: {', '.join(unknown)} (valid keys: {', '.join(sorted(valid))})"
+        )
 
 
 def _reject_unknown_keys(table: dict[str, Any]) -> None:
@@ -245,8 +332,10 @@ def _parse_llm(table: dict[str, Any]) -> LlmConfig:
     _reject_unknown_llm_keys(raw)
     return LlmConfig(
         model=_parse_llm_model(raw),
-        timeout=_parse_llm_positive_int(raw, "timeout", DEFAULT_LLM_TIMEOUT),
-        max_findings=_parse_llm_positive_int(raw, "max_findings", DEFAULT_LLM_MAX_FINDINGS),
+        timeout=_parse_positive_int(raw, "timeout", DEFAULT_LLM_TIMEOUT, prefix="llm"),
+        max_findings=_parse_positive_int(
+            raw, "max_findings", DEFAULT_LLM_MAX_FINDINGS, prefix="llm"
+        ),
     )
 
 
@@ -268,11 +357,11 @@ def _parse_llm_model(raw: dict[str, Any]) -> str:
     return model
 
 
-def _parse_llm_positive_int(raw: dict[str, Any], key: str, default: int) -> int:
-    """Validate a positive integer ``[llm]`` setting."""
+def _parse_positive_int(raw: dict[str, Any], key: str, default: int, *, prefix: str) -> int:
+    """Validate a positive integer setting in a configuration table."""
     value = raw.get(key, default)
     if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-        raise ConfigurationError(f"'llm.{key}' must be a positive integer")
+        raise ConfigurationError(f"'{prefix}.{key}' must be a positive integer")
     return value
 
 
