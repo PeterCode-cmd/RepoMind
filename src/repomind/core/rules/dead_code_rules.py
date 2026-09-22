@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Sequence
+
 from repomind.core.rules.base import AnalysisContext
 from repomind.models.enums import Category, Severity
 from repomind.models.findings import Finding
@@ -67,30 +69,49 @@ class UnusedPrivateFunctionRule:
 
     def analyze(self, context: AnalysisContext) -> list[Finding]:
         """Return one finding per unreferenced private function or method."""
-        referenced: set[str] = set()
-        exports: set[str] = set()
-        for module in context.modules:
-            referenced |= module.references
-            exports |= module.all_exports
-
+        referenced, exports = _referenced_names(context.modules)
         findings: list[Finding] = []
         for module in context.modules:
-            if module.syntax_error is not None:
-                continue
-            for function in module.functions:
-                finding = _dead_function_finding(
-                    module, function, referenced=referenced, exports=exports, rule=self
-                )
-                if finding is not None:
-                    findings.append(finding)
-            for cls in module.classes:
-                for method in cls.methods:
-                    finding = _dead_function_finding(
-                        module, method, referenced=referenced, exports=exports, rule=self
-                    )
-                    if finding is not None:
-                        findings.append(finding)
+            findings.extend(_module_dead_findings(module, referenced, exports, rule=self))
         return findings
+
+
+def _referenced_names(modules: Sequence[ParsedModule]) -> tuple[set[str], set[str]]:
+    """Collect every referenced name and declared export across modules."""
+    referenced: set[str] = set()
+    exports: set[str] = set()
+    for module in modules:
+        referenced |= module.references
+        exports |= module.all_exports
+    return referenced, exports
+
+
+def _module_dead_findings(
+    module: ParsedModule,
+    referenced: set[str],
+    exports: set[str],
+    *,
+    rule: UnusedPrivateFunctionRule,
+) -> list[Finding]:
+    """Return the dead private definitions of a single parsed module."""
+    if module.syntax_error is not None:
+        return []
+    return [
+        finding
+        for function in _private_definitions(module)
+        if (
+            finding := _dead_function_finding(
+                module, function, referenced=referenced, exports=exports, rule=rule
+            )
+        )
+        is not None
+    ]
+
+
+def _private_definitions(module: ParsedModule) -> Iterator[FunctionMetrics]:
+    """Yield module-level functions and methods that are private."""
+    methods = [method for cls in module.classes for method in cls.methods]
+    return (function for function in [*module.functions, *methods] if function.is_private)
 
 
 def _dead_function_finding(
@@ -102,7 +123,7 @@ def _dead_function_finding(
     rule: UnusedPrivateFunctionRule,
 ) -> Finding | None:
     """Build a finding when *function* is private and never referenced."""
-    if not function.is_private or function.is_decorated:
+    if function.is_decorated:
         return None
     if function.name in referenced or function.name in exports:
         return None
