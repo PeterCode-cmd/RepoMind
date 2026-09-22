@@ -21,11 +21,17 @@ class FunctionMetrics:
     nesting_depth: int
     is_method: bool = False
     class_name: str | None = None
+    decorators: tuple[str, ...] = ()
 
     @property
     def is_private(self) -> bool:
         """Return ``True`` for private (single underscore) names."""
         return self.name.startswith("_") and not self.name.startswith("__")
+
+    @property
+    def is_decorated(self) -> bool:
+        """Return ``True`` when the definition carries at least one decorator."""
+        return bool(self.decorators)
 
 
 @dataclass(slots=True)

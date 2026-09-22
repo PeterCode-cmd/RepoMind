@@ -71,3 +71,36 @@ def test_src_layout_strips_source_root(tmp_path: Path) -> None:
 
     assert module.module_name == "pkg.mod"
     assert module.rel_path == "src/pkg/mod.py"
+
+
+def test_decorators_are_recorded(tmp_path: Path) -> None:
+    path = tmp_path / "mod.py"
+    path.write_text(
+        "import functools\n"
+        "\n"
+        "\n"
+        "@functools.cache\n"
+        "def cached() -> int:\n"
+        "    return 1\n"
+        "\n"
+        "\n"
+        "class Service:\n"
+        "    @staticmethod\n"
+        "    def build(alpha: int, beta: int) -> int:\n"
+        "        return alpha + beta\n",
+        encoding="utf-8",
+    )
+
+    module = parse_module(path, tmp_path)
+    cached = module.functions[0]
+    build = module.classes[0].methods[0]
+
+    assert cached.decorators == ("cache",)
+    assert cached.is_decorated
+    assert build.decorators == ("staticmethod",)
+    assert build.parameters == 2
+
+
+def test_undecorated_functions_report_no_decorators(sample_project: Path) -> None:
+    module = parse_module(sample_project / "samplepkg" / "dead.py", sample_project)
+    assert all(not function.is_decorated for function in module.functions)

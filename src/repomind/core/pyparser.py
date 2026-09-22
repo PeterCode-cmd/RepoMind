@@ -159,6 +159,7 @@ def _function_metrics(
     """Build :class:`FunctionMetrics` for one function or method."""
     end_lineno = node.end_lineno if node.end_lineno is not None else node.lineno
     is_method = class_name is not None
+    decorators = _decorator_names(node)
     qualname = (
         f"{module_name}.{class_name}.{node.name}" if is_method else f"{module_name}.{node.name}"
     )
@@ -168,12 +169,17 @@ def _function_metrics(
         lineno=node.lineno,
         end_lineno=end_lineno,
         length=end_lineno - node.lineno + 1,
-        parameters=_count_parameters(node, is_method=is_method),
+        parameters=_count_parameters(
+            node,
+            is_method=is_method,
+            is_static="staticmethod" in decorators,
+        ),
         cyclomatic=cyclomatic_complexity(node),
         cognitive=cognitive_complexity(node),
         nesting_depth=max_nesting_depth(node),
         is_method=is_method,
         class_name=class_name,
+        decorators=decorators,
     )
 
 
@@ -181,10 +187,11 @@ def _count_parameters(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     *,
     is_method: bool,
+    is_static: bool,
 ) -> int:
     """Count declared parameters, dropping ``self``/``cls`` for methods."""
     positional = [*node.args.posonlyargs, *node.args.args]
-    if is_method and positional and not _has_decorator(node, "staticmethod"):
+    if is_method and not is_static and positional:
         positional = positional[1:]
     count = len(positional) + len(node.args.kwonlyargs)
     count += int(node.args.vararg is not None)
@@ -192,14 +199,19 @@ def _count_parameters(
     return count
 
 
-def _has_decorator(node: ast.FunctionDef | ast.AsyncFunctionDef, name: str) -> bool:
-    """Return ``True`` when *name* appears among the decorators of *node*."""
-    for decorator in node.decorator_list:
-        if isinstance(decorator, ast.Name) and decorator.id == name:
-            return True
-        if isinstance(decorator, ast.Attribute) and decorator.attr == name:
-            return True
-    return False
+def _decorator_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[str, ...]:
+    """Return readable names of all decorators applied to *node*."""
+    return tuple(_decorator_name(decorator) for decorator in node.decorator_list)
+
+
+def _decorator_name(decorator: ast.expr) -> str:
+    """Return a readable name for one decorator expression."""
+    target = decorator.func if isinstance(decorator, ast.Call) else decorator
+    if isinstance(target, ast.Name):
+        return target.id
+    if isinstance(target, ast.Attribute):
+        return target.attr
+    return ast.unparse(target)
 
 
 def _class_metrics(node: ast.ClassDef, module_name: str) -> ClassMetrics:

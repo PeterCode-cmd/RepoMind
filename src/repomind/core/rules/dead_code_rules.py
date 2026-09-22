@@ -50,13 +50,18 @@ class UnusedPrivateFunctionRule:
     as used when its name appears as a loaded name, an attribute access or an
     identifier-like string anywhere in the analyzed code (which covers
     ``getattr`` dispatch and registry dictionaries).
+
+    Decorated definitions are exempt on purpose: decorators usually register
+    callables with a framework (CLI commands, pytest fixtures, event
+    handlers), so the code never references them by name.
     """
 
     id = "dead-code/unused-private-function"
     title = "Unused private function"
     description = (
         "Private helpers that no code calls are dead weight; they mislead "
-        "readers about the module's real surface."
+        "readers about the module's real surface. Decorated definitions are "
+        "exempt because decorators register them with frameworks."
     )
     category = Category.DEAD_CODE
 
@@ -97,7 +102,7 @@ def _dead_function_finding(
     rule: UnusedPrivateFunctionRule,
 ) -> Finding | None:
     """Build a finding when *function* is private and never referenced."""
-    if not function.is_private:
+    if not function.is_private or function.is_decorated:
         return None
     if function.name in referenced or function.name in exports:
         return None

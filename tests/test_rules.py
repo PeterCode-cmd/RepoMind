@@ -98,3 +98,36 @@ def test_analysis_is_deterministic(sample_project: Path) -> None:
         (f.rule_id, f.path, f.line) for f in second.findings
     ]
     assert first.score.value == second.score.value
+
+
+def test_decorated_private_functions_are_not_reported(tmp_path: Path) -> None:
+    module = tmp_path / "app.py"
+    module.write_text(
+        "class App:\n"
+        "    def callback(self) -> object:\n"
+        "        def decorator(function: object) -> object:\n"
+        "            return function\n"
+        "        return decorator\n"
+        "\n"
+        "\n"
+        "app = App()\n"
+        "\n"
+        "\n"
+        "@app.callback()\n"
+        "def _root() -> None:\n"
+        "    return None\n"
+        "\n"
+        "\n"
+        "def _plain() -> None:\n"
+        "    return None\n",
+        encoding="utf-8",
+    )
+
+    result = analyze_repository(tmp_path, use_history=False)
+    dead = [
+        finding.symbol
+        for finding in result.findings
+        if finding.rule_id == "dead-code/unused-private-function"
+    ]
+
+    assert dead == ["app._plain"]
