@@ -33,6 +33,7 @@ explainable findings, and shareable Markdown/JSON reports.
 | Dead code | unused imports, unreferenced private functions and methods |
 | Dependencies | import cycles (strongly connected components), external package usage, hub modules |
 | Call graph | function-level call edges; caller counts attached to findings and fan-in leaders in reports |
+| Cohesion & coupling | LCOM4 per class (stub and dunder methods excluded) and afferent/efferent coupling with instability per module |
 | Security | `eval`/`exec`, `shell=True` and `os.system`, unsafe pickle/YAML deserialization, weak hashes, `tempfile.mktemp`, hardcoded secrets (values never reported) |
 | Documentation | missing docstrings on public modules, classes, functions and methods (private names, framework hooks and tests exempt) |
 | History | churn per file and per function (`git log -L`), authors, recency, and **complexity × churn hotspots** (function-level when available) |
@@ -77,8 +78,8 @@ repomind analyze /path/to/repository
 ```text
 ╭──────────────────────────────── RepoMind ─────────────────────────────────╮
 │ Repository   /home/dev/RepoMind                                           │
-│ Python code  69 files | 6,129 source lines                                │
-│ Duration     2.61 s                                                       │
+│ Python code  71 files | 6,422 source lines                                │
+│ Duration     4.09 s                                                       │
 │ Git history  analyzed                                                     │
 ╰───────────────────────────────────────────────────────────────────────────╯
 
@@ -89,21 +90,22 @@ No findings above the configured thresholds.
 
 Dependency graph
  Metric            Value
- Internal modules     69
- Internal imports    196
+ Internal modules     71
+ Internal imports    204
  Import cycles         0
  External packages    25
 
-Call graph: 441 functions, 502 call edges
- fan-in repomind.core.engine.analyze_repository (24 callers)
- fan-in repomind.core.pyparser.parse_module (19 callers)
+Call graph: 460 functions, 526 call edges
+ fan-in repomind.core.engine.analyze_repository (26 callers)
+ fan-in repomind.core.pyparser.parse_module (21 callers)
  fan-in repomind.config.load_config (16 callers)
+Most unstable modules: repomind.__main__ (1.00), repomind.git (1.00), repomind.models (1.00)
 
-Change hotspots (last 19 commits on master)
+Change hotspots (last 20 commits on master)
  File                              Commits   Churn   Authors   Last change   Heat
- src/repomind/core/engine.py             7     481         1   2026-09-22     100
- src/repomind/core/pyparser.py           5     428         1   2026-09-22      77
- src/repomind/cli/app.py                 3     502         1   2026-09-22      70
+ src/repomind/core/engine.py             8     584         1   2026-09-22     100
+ src/repomind/core/pyparser.py           6     450         1   2026-09-22      68
+ src/repomind/cli/app.py                 3     502         1   2026-09-22      54
 
 Tip: use --format markdown --output report.md for a shareable report or --format json for machine-readable output.
 ```

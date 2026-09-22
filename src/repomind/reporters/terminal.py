@@ -232,6 +232,11 @@ def _render_graph(result: AnalysisResult, console: Console) -> None:
         for symbol, count in call_graph.top_fan_in(limit=3):
             console.print(f"  [dim]fan-in[/dim] {symbol} ({count} callers)")
 
+    unstable = result.graph.top_unstable(limit=3)
+    if unstable:
+        rendered = ", ".join(f"{module} ({value:.2f})" for module, value in unstable)
+        console.print(f"[dim]Most unstable modules:[/dim] {rendered}")
+
     for cycle in graph.cycles():
         console.print(f"  [bold red]cycle[/bold red] {' <-> '.join(cycle)}")
 

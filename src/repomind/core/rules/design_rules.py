@@ -32,6 +32,67 @@ class GodObjectRule:
         return findings
 
 
+class LowCohesionRule:
+    """Flag classes whose methods form disconnected groups (LCOM4).
+
+    LCOM4 counts connected components of methods linked by shared
+    ``self.<name>`` state or direct calls. One component is cohesive; several
+    components mean the class bundles responsibilities that could be split.
+    Dunder methods are excluded so constructors do not mask the structure.
+    """
+
+    id = "design/low-cohesion"
+    title = "Low class cohesion"
+    description = (
+        "Classes whose methods cluster into disconnected groups mix several "
+        "responsibilities and are hard to test in isolation."
+    )
+    category = Category.DESIGN
+
+    def analyze(self, context: AnalysisContext) -> list[Finding]:
+        """Return one finding per class above the LCOM4 threshold."""
+        thresholds = context.config.thresholds
+        findings: list[Finding] = []
+        for module in context.modules:
+            for cls in module.classes:
+                if cls.lcom < thresholds.lcom_warn:
+                    continue
+                findings.append(_cohesion_finding(self, module, cls, thresholds))
+        return findings
+
+
+def _cohesion_finding(
+    rule: LowCohesionRule,
+    module: ParsedModule,
+    cls: ClassMetrics,
+    thresholds: Thresholds,
+) -> Finding:
+    """Build the low-cohesion finding for one class."""
+    severity = Severity.HIGH if cls.lcom >= thresholds.lcom_high else Severity.MEDIUM
+    return Finding(
+        rule_id=rule.id,
+        title=rule.title,
+        message=(
+            f"Class `{cls.name}` in {module.rel_path} has LCOM4 = {cls.lcom}: "
+            f"its methods form {cls.lcom} disconnected groups."
+        ),
+        severity=severity,
+        category=rule.category,
+        path=module.rel_path,
+        line=cls.lineno,
+        symbol=f"{module.module_name}.{cls.name}",
+        suggestion=(
+            "Split the class along its disconnected method groups; each group "
+            "usually represents a separate responsibility."
+        ),
+        details={
+            "lcom": cls.lcom,
+            "methods": cls.method_count,
+            "attributes": cls.attribute_count,
+        },
+    )
+
+
 def _violated_criteria(cls: ClassMetrics, thresholds: Thresholds) -> list[str]:
     """Return human readable descriptions of every violated size threshold."""
     criteria: list[str] = []

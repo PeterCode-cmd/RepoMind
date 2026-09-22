@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A function-level call graph (`core/callgraph.py`) resolving local, method,
   constructor and imported call targets; findings gain a `callers` count and
   reports list the most-called functions.
+- Class cohesion via LCOM4 (`core/cohesion.py`) with a `design/low-cohesion`
+  rule, plus afferent/efferent coupling and instability per module in reports.
 
 ## [0.1.0] - 2026-09-22
 

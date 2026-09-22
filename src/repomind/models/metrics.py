@@ -23,6 +23,8 @@ class FunctionMetrics:
     class_name: str | None = None
     decorators: tuple[str, ...] = ()
     calls: tuple[str, ...] = ()
+    attributes: tuple[str, ...] = ()
+    is_stub: bool = False
     has_docstring: bool = False
 
     @property
@@ -47,6 +49,7 @@ class ClassMetrics:
     methods: list[FunctionMetrics] = field(default_factory=list)
     attribute_count: int = 0
     base_count: int = 0
+    lcom: int = 0
     has_docstring: bool = False
 
     @property

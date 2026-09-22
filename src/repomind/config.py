@@ -51,6 +51,8 @@ class Thresholds:
     god_object_methods: int = 15
     god_object_loc: int = 250
     god_object_wmc: int = 70
+    lcom_warn: int = 3
+    lcom_high: int = 5
     hotspot_min_cyclomatic: int = 10
     hotspot_min_commits: int = 5
 

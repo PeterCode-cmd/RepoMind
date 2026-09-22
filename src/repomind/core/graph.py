@@ -77,6 +77,25 @@ class DependencyGraph:
         """Return the *limit* modules importing the most other modules."""
         return sorted(self.fan_out().items(), key=lambda item: (-item[1], item[0]))[:limit]
 
+    def instability(self) -> dict[str, float]:
+        """Return ``Ce / (Ca + Ce)`` per module.
+
+        Zero means stable (nothing depends on it less than it depends on
+        others); one means unstable. Modules with no coupling at all are
+        reported as ``0.0``.
+        """
+        fan_in, fan_out = self.fan_in(), self.fan_out()
+        values: dict[str, float] = {}
+        for node in self.graph.nodes:
+            total = fan_in[node] + fan_out[node]
+            values[node] = fan_out[node] / total if total else 0.0
+        return values
+
+    def top_unstable(self, limit: int = 5) -> list[tuple[str, float]]:
+        """Return the *limit* most unstable coupled modules."""
+        ranked = sorted(self.instability().items(), key=lambda item: (-item[1], item[0]))
+        return [(module, value) for module, value in ranked if value > 0.0][:limit]
+
     def to_dot(self) -> str:
         """Render the graph in Graphviz DOT format."""
         lines = ["digraph repomind {"]

@@ -13,6 +13,7 @@ import tokenize
 from pathlib import Path
 
 from repomind.core.astutils import call_name
+from repomind.core.cohesion import lcom4
 from repomind.core.complexity import (
     cognitive_complexity,
     cyclomatic_complexity,
@@ -185,6 +186,8 @@ def _function_metrics(
         class_name=class_name,
         decorators=decorators,
         calls=_collect_calls(node),
+        attributes=_self_references(node),
+        is_stub=_is_stub(node),
         has_docstring=ast.get_docstring(node) is not None,
     )
 
@@ -252,6 +255,7 @@ def _class_metrics(node: ast.ClassDef, module_name: str) -> ClassMetrics:
         methods=methods,
         attribute_count=len(attributes),
         base_count=len(node.bases),
+        lcom=lcom4(methods),
         has_docstring=ast.get_docstring(node) is not None,
     )
 
@@ -283,6 +287,30 @@ def _assigned_names(statement: ast.stmt) -> set[str]:
     else:
         return set()
     return {target.id for target in targets if isinstance(target, ast.Name)}
+
+
+def _is_stub(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """Return ``True`` for protocol-style methods without a real body."""
+    for statement in node.body:
+        if isinstance(statement, (ast.Pass, ast.Raise)):
+            continue
+        if isinstance(statement, ast.Expr) and isinstance(statement.value, ast.Constant):
+            continue
+        return False
+    return True
+
+
+def _self_references(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[str, ...]:
+    """Return distinct ``self.<name>`` references inside a method."""
+    names: set[str] = set()
+    for child in ast.walk(node):
+        if (
+            isinstance(child, ast.Attribute)
+            and isinstance(child.value, ast.Name)
+            and child.value.id == "self"
+        ):
+            names.add(child.attr)
+    return tuple(sorted(names))
 
 
 def _self_attributes(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:

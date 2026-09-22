@@ -61,6 +61,7 @@ def result_to_dict(
             "internal_imports": result.graph.edge_count,
             "cycles": [list(cycle) for cycle in result.graph.cycles()],
             "external_packages": dict(result.graph.external_imports.most_common()),
+            "instability": _instability_to_dict(result),
         },
         "call_graph": _call_graph_to_dict(result),
         "history": _history_to_dict(result),
@@ -99,6 +100,21 @@ def _finding_to_dict(finding: Finding, *, is_new: bool | None = None) -> dict[st
         "details": finding.details,
         "is_new": is_new,
     }
+
+
+def _instability_to_dict(result: AnalysisResult) -> list[dict[str, Any]]:
+    """Convert the most unstable coupled modules into a JSON-serialisable list."""
+    graph = result.graph
+    fan_in, fan_out = graph.fan_in(), graph.fan_out()
+    return [
+        {
+            "module": module,
+            "instability": round(value, 3),
+            "afferent": fan_in[module],
+            "efferent": fan_out[module],
+        }
+        for module, value in graph.top_unstable(limit=5)
+    ]
 
 
 def _call_graph_to_dict(result: AnalysisResult) -> dict[str, Any]:

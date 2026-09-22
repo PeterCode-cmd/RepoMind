@@ -222,7 +222,29 @@ def _dependency_section(result: AnalysisResult) -> list[str]:
         )
         lines.append("")
 
+    lines.extend(_unstable_lines(result))
+
     return lines
+
+
+def _unstable_lines(result: AnalysisResult) -> list[str]:
+    """Render the instability table, or nothing when no module is coupled."""
+    unstable = result.graph.top_unstable(limit=5)
+    if not unstable:
+        return []
+    fan_in, fan_out = result.graph.fan_in(), result.graph.fan_out()
+    return [
+        "### Most unstable modules",
+        "",
+        *_table(
+            ["Module", "Instability", "Ca", "Ce"],
+            [
+                [module, f"{value:.2f}", str(fan_in[module]), str(fan_out[module])]
+                for module, value in unstable
+            ],
+        ),
+        "",
+    ]
 
 
 def _history_section(result: AnalysisResult) -> list[str]:

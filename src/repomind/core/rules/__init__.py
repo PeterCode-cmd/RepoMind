@@ -19,7 +19,7 @@ from repomind.core.rules.dead_code_rules import (
     UnusedPrivateFunctionRule,
 )
 from repomind.core.rules.dependency_rules import CyclicDependencyRule
-from repomind.core.rules.design_rules import GodObjectRule
+from repomind.core.rules.design_rules import GodObjectRule, LowCohesionRule
 from repomind.core.rules.documentation_rules import MissingDocstringRule
 from repomind.core.rules.history_rules import ComplexityHotspotRule
 from repomind.core.rules.maintainability_rules import (
@@ -48,6 +48,7 @@ def default_rules() -> tuple[Rule, ...]:
         TooManyParametersRule(),
         LargeFileRule(),
         GodObjectRule(),
+        LowCohesionRule(),
         UnusedImportRule(),
         UnusedPrivateFunctionRule(),
         CyclicDependencyRule(),
